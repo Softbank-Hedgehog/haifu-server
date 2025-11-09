@@ -1,18 +1,27 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from enum import Enum
 
 class UserRole(str, Enum):
     ADMIN = "ADMIN"
     USER = "USER"
 
-class MemberBase(BaseModel):
-    user_id: str
-    role: UserRole
+class MemberCreate(BaseModel):
+    login_id: str
+    password: str
+    nickname: str
 
-class MemberCreate(MemberBase):
+class MemberResponse(BaseModel):
+    member_id: str
+    login_id: str
+    nickname: str
+    role: str
+    created_at: str
+
+    class Config:
+        orm_mode = True
+
+# 로그인 요청 DTO
+class MemberLogin(BaseModel):
+    login_id: str
     password: str
 
-class MemberResponse(MemberBase):
-    id: int
-    class Config:
-        orm_mode = True  # SQLAlchemy 모델을 자동 직렬화
