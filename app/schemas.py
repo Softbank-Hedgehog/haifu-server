@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 from enum import Enum
 
@@ -15,8 +17,7 @@ class MemberResponse(BaseModel):
     login_id: str
     nickname: str
     role: str
-    created_at: str
-
+    created_at: datetime
     class Config:
         orm_mode = True
 
