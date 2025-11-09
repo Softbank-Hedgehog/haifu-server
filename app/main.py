@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import Base, engine
-from app.routers import users
+from app.routers import users, health
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,3 +24,4 @@ app.add_middleware(
 )
 
 app.include_router(users.router)
+app.include_router(health.router)
