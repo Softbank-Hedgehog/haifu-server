@@ -23,5 +23,4 @@ app.add_middleware(
     allow_headers=["*"],              # 허용할 헤더
 )
 
-app.include_router(users.router)
 app.include_router(health.router)
