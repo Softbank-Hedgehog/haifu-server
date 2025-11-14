@@ -1,5 +1,5 @@
 # app/routers/auth.py
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Query
 import httpx
 from app.core.config import settings
 from app.core.security import create_access_token, get_current_user
@@ -23,15 +23,15 @@ async def github_login():
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"
         f"?client_id={settings.GITHUB_CLIENT_ID}"
-        f"&redirect_uri={settings.FRONTEND_URL}/auth/callback"
+        f"&redirect_uri=http://localhost:8000/api/auth/github/callback"
         f"&scope=repo,user:email"
     )
 
     return GitHubLoginUrlResponse(url=github_auth_url)
 
 
-@router.post("/github/callback", response_model=TokenResponse)
-async def github_callback(request: GitHubCallbackRequest):
+@router.get("/github/callback", response_model=TokenResponse)
+async def github_callback(code: str = Query(description="Github OAuth authorization code")):
     """
     GitHub OAuth 콜백 처리
 
@@ -57,7 +57,7 @@ async def github_callback(request: GitHubCallbackRequest):
             data={
                 'client_id': settings.GITHUB_CLIENT_ID,
                 'client_secret': settings.GITHUB_CLIENT_SECRET,
-                'code': request.code,
+                'code': code
             },
             timeout=10.0
         )
