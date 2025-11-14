@@ -5,6 +5,7 @@ from mangum import Mangum
 from app.routers import auth
 from app.core.config import settings
 from app.routers.health import router
+from app.routers import auth, repos, health
 
 # FastAPI 앱 생성
 app = FastAPI(
@@ -30,7 +31,8 @@ app.add_middleware(
 
 # 라우터 등록
 app.include_router(auth.router)
-app.include_router(router)
+app.include_router(repos.router)
+app.include_router(health.router)
 
 @app.get("/")
 def root():
