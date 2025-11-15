@@ -4,9 +4,9 @@
 
 - [API](#api)
     - 인증
-      - [회원가입](#github-로그인-url-조회)
-      - [로그인](#github-oauth-콜백)
-      - [내 정보 조회](#현재-사용자-정보-조회)
+      - [Github 로그인 URL 조회](#github-로그인-url-조회)
+      - [Github OAuth 콜백](#github-oauth-콜백)
+      - [현재 사용자 정보 조회](#현재-사용자-정보-조회)
     - 레포지토리
       - [레포지토리 목록 조회](#레포지토리-목록-조회)
       - [레포지토리 상세 조회](#레포지토리-상세-조회)
@@ -26,7 +26,17 @@
         ```json
         {  "url": "https://github.com/login/oauth/authorize?client_id=..."}
         ```
-        
+
+프론트 측에서는 다음과 같이 활용하시면 됩니다.
+```typescript
+const response = await fetch('/api/auth/github/login');
+const data = await response.json();
+// { "url": "https://github.com/login/oauth/authorize?..." }
+
+// 사용자를 GitHub 로그인 페이지로 리디렉션
+window.location.href = data.url;
+```
+
 
 ### GitHub OAuth 콜백
 
@@ -52,6 +62,12 @@
         ```
         
     - 400 Bad Request → 잘못된 code 또는 GitHub OAuth 실패
+
+프론트 측에서는 이곳에서 받은 `access_token`(JWT 토큰)을 저장해 둔 후 사용자 정보 필요 시
+```
+Authorization: Bearer <access_token>
+```
+형식으로 담아 서버에 전달하면 됩니다.
 
 ### 현재 사용자 정보 조회
 
@@ -162,6 +178,19 @@
         
     - 404 Not Found → 레포지토리를 찾을 수 없음
     - 401 Unauthorized → 유효하지 않은 토큰
+
+프론트 측에서는 다음과 같이 활용 하시면 됩니다.
+
+```typescript
+// 사용자가 레포 목록에서 선택
+const repo = { full_name: "facebook/react" };
+const [owner, repoName] = repo.full_name.split('/');
+
+// API 호출
+const response = await fetch(`/api/repos/${owner}/${repoName}`, {
+  headers: { 'Authorization': `Bearer ${token}` }
+});
+```
 
 #### 응답 필드 정보
 
