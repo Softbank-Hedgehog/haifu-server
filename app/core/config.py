@@ -46,7 +46,8 @@ def get_settings() -> Settings:
         return Settings(
             GITHUB_CLIENT_ID=get_param("/haifu/github-client-id"),
             GITHUB_CLIENT_SECRET=get_param("/haifu/github-client-secret"),
-            JWT_SECRET_KEY=get_param("/haifu/jwt-secret")
+            JWT_SECRET_KEY=get_param("/haifu/jwt-secret"),
+            FRONTEND_URL=get_param("/haifu/frontend-url")
         )
     except Exception as e:
         print(f"파라미터 스토어를 로드하는데 실패 했습니다.: {e}")
