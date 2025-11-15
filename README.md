@@ -163,6 +163,69 @@
     - 404 Not Found → 레포지토리를 찾을 수 없음
     - 401 Unauthorized → 유효하지 않은 토큰
 
+#### 응답 필드 정보
+
+기본정보
+
+| 필드 | 타입 | 설명 | 예시 |
+| --- | --- | --- | --- |
+| `id` | number | GitHub 레포지토리 고유 ID | `123456789` |
+| `name` | string | 레포지토리 이름 | `"my-react-app"` |
+| `full_name` | string | owner/repo 형태의 전체 이름 | `"user/my-react-app"` |
+| `description` | string | 레포 설명 (사용자가 작성) | `"A simple React todo app"` |
+
+URL 정보
+
+| 필드 | 타입 | 설명 | 예시 |
+| --- | --- | --- | --- |
+| `html_url` | string | 브라우저에서 볼 수 있는 웹 URL | `"<https://github.com/user/my-app>"` |
+| `clone_url` | string | HTTPS clone URL | `"<https://github.com/user/my-app.git>"` |
+| `ssh_url` | string | SSH clone URL | `"git@github.com:user/my-app.git"` |
+
+코드 정보
+
+| 필드 | 타입 | 설명 | 예시 |
+| --- | --- | --- | --- |
+| `language` | string | GitHub이 감지한 주요 언어 | `"JavaScript"` |
+| `languages_url` | string | 모든 언어 비율 조회 API URL | `"<https://api.github.com/repos/.../languages>"` |
+| `topics` | array | 레포에 설정된 토픽/태그 | `["react", "typescript", "pwa"]` |
+| `default_branch` | string | 기본 브랜치 이름 | `"main"` |
+
+소유자 정보
+
+| 필드 | 타입 | 설명 | 예시 |
+| --- | --- | --- | --- |
+| `owner.login` | string | GitHub 사용자명 | `"user"` |
+| `owner.avatar_url` | string | 프로필 이미지 URL | `"<https://avatars.githubusercontent.com/>..."` |
+| `private` | boolean | 비공개 레포 여부 | `false` |
+
+통계 정보
+
+| 필드 | 타입 | 설명 | 예시 |
+| --- | --- | --- | --- |
+| `size` | number | 레포지토리 크기 (KB) | `2048` |
+| `stargazers_count` | number | 스타(⭐) 개수 | `150` |
+| `watchers_count` | number | 와처 수 | `150` |
+| `forks_count` | number | 포크 횟수 | `25` |
+| `open_issues_count` | number | 열린 이슈 개수 | `5` |
+
+시간 정보
+
+| 필드 | 타입 | 설명 | 예시 |
+| --- | --- | --- | --- |
+| `created_at` | string (ISO 8601) | 레포 생성 시간 | `"2023-01-15T10:00:00Z"` |
+| `updated_at` | string (ISO 8601) | 레포 메타데이터 마지막 업데이트 | `"2024-01-15T10:00:00Z"` |
+| `pushed_at` | string (ISO 8601) | 마지막 코드 푸시 시간 | `"2024-01-15T15:30:00Z"` |
+
+
+AI 챗봇에게 유용할 것 같은 정보는 아래와 같습니다.
+
+- `language`: 주요 언어
+- `topics`: 토픽/태그. 사용자가 직접 설정한 키워드
+- `name`: 레포지토리 이름 → 이름에서 힌트를 얻을 수 있음
+- `description`: 설명 사용자가 작성한 레포지토리 설명
+- `default_branch`: 기본 브랜치. 어느 브랜치 분석할지 결정
+
 ### 서버 상태 확인
 
 **GET /health**
