@@ -23,7 +23,7 @@ async def github_login():
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"
         f"?client_id={settings.GITHUB_CLIENT_ID}"
-        f"&redirect_uri=http://localhost:8000/api/auth/github/callback"
+        f"&redirect_uri=https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws/api/auth/github/callback"
         f"&scope=repo,user:email"
     )
 

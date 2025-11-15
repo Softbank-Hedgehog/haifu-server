@@ -1,11 +1,18 @@
 FROM public.ecr.aws/lambda/python:3.10
 
+# 작업 디렉토리 설정
+WORKDIR ${LAMBDA_TASK_ROOT}
+
 # Install dependencies
-COPY requirements.txt .
+COPY requirements.txt ${LAMBDA_TASK_ROOT}/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application
-COPY app ./app
+# Copy application code
+COPY app/ ${LAMBDA_TASK_ROOT}/app/
+COPY lambda_function.py ${LAMBDA_TASK_ROOT}/
 
-# Command for Lambda handler (app/main.py 내부에 handler 있어야 함)
-CMD ["app.main.handler"]
+# ENTRYPOINT 명시
+ENTRYPOINT ["/lambda-entrypoint.sh"]
+
+# Handler
+CMD ["lambda_function.lambda_handler"]

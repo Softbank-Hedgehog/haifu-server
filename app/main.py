@@ -2,9 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from app.routers import auth
 from app.core.config import settings
-from app.routers.health import router
 from app.routers import auth, repos, health
 
 # FastAPI 앱 생성
