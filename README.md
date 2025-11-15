@@ -37,7 +37,6 @@ const data = await response.json();
 window.location.href = data.url;
 ```
 
-
 ### GitHub OAuth 콜백
 
 **GET /api/auth/github/callback**
@@ -45,29 +44,21 @@ window.location.href = data.url;
 - **쿼리 파라미터**
     - `code`: GitHub에서 발급한 authorization code
 - **응답**
-    - 200 OK
-        
-        ```json
-        {
-          "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-          "token_type": "bearer",
-          "user": {
-            "id": 123456,
-            "username": "user",
-            "email": "user@example.com",
-            "avatar_url": "https://avatars.githubusercontent.com/u/123456",
-            "name": "User Name"
-          }
-        }
-        ```
-        
-    - 400 Bad Request → 잘못된 code 또는 GitHub OAuth 실패
+    - 302 Found (Redirect)
+        - 성공 시: `{FRONTEND_URL}/callback?token={jwt_token}` 으로 리다이렉트
+        - 실패 시: `{FRONTEND_URL}/callback?error={error_type}` 으로 리다이렉트
+    
+    **에러 타입:**
+    - `failed_to_get_token`: GitHub에서 access token 발급 실패
+    - `failed_to_get_user_info`: GitHub API에서 사용자 정보 조회 실패
+    - `oauth_error`: GitHub OAuth 에러
+    - `unexpected_error`: 예상치 못한 서버 에러
 
-프론트 측에서는 이곳에서 받은 `access_token`(JWT 토큰)을 저장해 둔 후 사용자 정보 필요 시
+프론트엔드에서는 `/callback` 페이지에서 쿼리 파라미터로 전달받은 `token`(JWT 토큰)을 저장해 둔 후, 사용자 정보가 필요한 API 호출 시
 ```
 Authorization: Bearer <access_token>
 ```
-형식으로 담아 서버에 전달하면 됩니다.
+형식으로 헤더에 담아 서버에 전달하면 됩니다.
 
 ### 현재 사용자 정보 조회
 
