@@ -1,160 +1,74 @@
 # app/routers/auth.py
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
-import httpx
 from app.core.config import settings
-from app.core.security import create_access_token, get_current_user
-from app.schemas.auth import (
-    GitHubCallbackRequest,
-    TokenResponse,
-    UserResponse,
-    GitHubLoginUrlResponse
-)
+from app.core.security import get_current_user
+from app.service.auth_service import AuthService
+from app.schemas.common import success_response, ApiResponse, GitHubLoginUrl, UserInfo, common_responses
 
 router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
-@router.get("/github/login", response_model=GitHubLoginUrlResponse)
+@router.get("/github/login", response_model=ApiResponse[GitHubLoginUrl], responses=common_responses)
 async def github_login(origin: str = Query(default="http://localhost:3000")):
     """
     GitHub OAuth 로그인 URL 반환
-
-    프론트엔드에서 이 URL로 리디렉션하여 사용자를 GitHub 로그인 페이지로 보냄
     """
-    # origin 검증
-    if origin not in settings.ALLOWED_FRONTEND_URLS:
-        origin = settings.FRONTEND_URL
+    github_auth_url = AuthService.generate_github_auth_url(origin)
     
-    github_auth_url = (
-        f"https://github.com/login/oauth/authorize"
-        f"?client_id={settings.GITHUB_CLIENT_ID}"
-        f"&redirect_uri=https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws/api/auth/github/callback"
-        f"&scope=repo,user:email"
-        f"&state={origin}"
+    return success_response(
+        data={"url": github_auth_url},
+        message="GitHub login URL generated successfully"
     )
 
-    return GitHubLoginUrlResponse(url=github_auth_url)
 
-
-@router.get("/github/callback")  # response_model 제거
+@router.get(
+    "/github/callback",
+    responses={
+        302: {"description": "Redirect to frontend with token or error"},
+        **common_responses
+    }
+)
 async def github_callback(
     code: str = Query(description="Github OAuth authorization code"),
     state: str = Query(default="http://localhost:3000")
 ):
     """
     GitHub OAuth 콜백 처리
-
-    1. GitHub에서 받은 code를 access_token으로 교환
-    2. GitHub API로 사용자 정보 조회
-    3. JWT 토큰 생성
-    4. 프론트엔드로 리다이렉트하면서 토큰 전달
-
-    Args:
-        code: GitHub OAuth authorization code
-
-    Returns:
-        프론트엔드로 리다이렉트 (토큰 포함)
-
-    Raises:
-        HTTPException: GitHub OAuth 실패 시
+    
+    GitHub에서 인증 완료 후 호출되는 콜백 엔드포인트입니다.
+    성공 시 프론트엔드로 JWT 토큰과 함께 리다이렉트합니다.
+    
+    **리다이렉트 URL:**
+    - 성공: `{frontend_url}/callback?token={jwt_token}`
+    - 실패: `{frontend_url}/callback?error={error_type}`
     """
-
+    frontend_url = state if state in settings.ALLOWED_FRONTEND_URLS else settings.FRONTEND_URL
+    
     try:
-        # 1. GitHub에서 access_token 받기
-        async with httpx.AsyncClient() as client:
-            token_response = await client.post(
-                'https://github.com/login/oauth/access_token',
-                headers={'Accept': 'application/json'},
-                data={
-                    'client_id': settings.GITHUB_CLIENT_ID,
-                    'client_secret': settings.GITHUB_CLIENT_SECRET,
-                    'code': code
-                },
-                timeout=10.0
-            )
-
-        # state에서 프론트엔드 URL 검증
-        frontend_url = state if state in settings.ALLOWED_FRONTEND_URLS else settings.FRONTEND_URL
+        # 1. Code를 Access Token으로 교환
+        access_token = await AuthService.exchange_code_for_token(code)
         
-        if token_response.status_code != 200:
-            # 에러 시에도 프론트엔드로 리다이렉트 (에러 메시지 포함)
-            return RedirectResponse(
-                url=f"{frontend_url}/callback?error=failed_to_get_token"
-            )
-
-        token_data = token_response.json()
-
-        if 'error' in token_data:
-            return RedirectResponse(
-                url=f"{frontend_url}/callback?error={token_data.get('error', 'oauth_error')}"
-            )
-
-        github_access_token = token_data['access_token']
-
-        # 2. GitHub API로 사용자 정보 가져오기
-        async with httpx.AsyncClient() as client:
-            user_response = await client.get(
-                'https://api.github.com/user',
-                headers={
-                    'Authorization': f'Bearer {github_access_token}',
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                timeout=10.0
-            )
-
-        if user_response.status_code != 200:
-            return RedirectResponse(
-                url=f"{frontend_url}/callback?error=failed_to_get_user_info"
-            )
-
-        user_data = user_response.json()
-
-        # 3. 사용자 이메일 가져오기 (primary email)
-        email = user_data.get('email')
-        if not email:
-            async with httpx.AsyncClient() as client:
-                emails_response = await client.get(
-                    'https://api.github.com/user/emails',
-                    headers={
-                        'Authorization': f'Bearer {github_access_token}',
-                        'Accept': 'application/vnd.github.v3+json'
-                    },
-                    timeout=10.0
-                )
-
-            if emails_response.status_code == 200:
-                emails_data = emails_response.json()
-                primary_email = next(
-                    (e['email'] for e in emails_data if e.get('primary')),
-                    None
-                )
-                email = primary_email
-
-        # 4. JWT 토큰 생성
-        jwt_payload = {
-            'user_id': user_data['id'],
-            'username': user_data['login'],
-            'email': email,
-            'avatar_url': user_data['avatar_url'],
-            'github_access_token': github_access_token,
-        }
-
-        jwt_token = create_access_token(jwt_payload)
-
-        # 5. 프론트엔드로 리다이렉트 (토큰 포함)
+        # 2. 사용자 정보 조회
+        user_info = await AuthService.get_github_user_info(access_token)
+        
+        # 3. JWT 토큰 생성
+        jwt_token = AuthService.create_jwt_token(user_info)
+        
+        # 4. 프론트엔드로 리다이렉트
         return RedirectResponse(
-            url=f"{frontend_url}/callback?token={jwt_token}"
+            url=f"{frontend_url}/callback?token={jwt_token}",
+            status_code=302
         )
-
+        
     except Exception as e:
-        # 예상치 못한 에러 발생 시
-        frontend_url = state if state in settings.ALLOWED_FRONTEND_URLS else settings.FRONTEND_URL
         return RedirectResponse(
-            url=f"{frontend_url}/callback?error=unexpected_error"
+            url=f"{frontend_url}/callback?error=unexpected_error",
+            status_code=302
         )
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me", response_model=ApiResponse[UserInfo], responses=common_responses)
 async def get_me(current_user: dict = Depends(get_current_user)):
     """
     현재 로그인한 사용자 정보 조회
@@ -165,16 +79,21 @@ async def get_me(current_user: dict = Depends(get_current_user)):
     Returns:
         사용자 정보
     """
-    return UserResponse(
-        id=current_user['user_id'],
-        username=current_user['username'],
-        email=current_user.get('email'),
-        avatar_url=current_user['avatar_url'],
-        name=current_user.get('name')
+    user_info = {
+        "id": current_user['user_id'],
+        "username": current_user['username'],
+        "email": current_user.get('email'),
+        "avatar_url": current_user['avatar_url'],
+        "name": current_user.get('name')
+    }
+    
+    return success_response(
+        data=user_info,
+        message="User information retrieved successfully"
     )
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=ApiResponse[None], responses=common_responses)
 async def logout():
     """
     로그아웃
@@ -182,4 +101,6 @@ async def logout():
     실제로는 프론트엔드에서 JWT 토큰을 삭제하면 됨
     백엔드에서는 별도 처리 없음 (Stateless)
     """
-    return {"message": "Logged out successfully"}
+    return success_response(
+        message="Logged out successfully"
+    )
