@@ -238,13 +238,13 @@ URL 정보
 | `pushed_at` | string (ISO 8601) | 마지막 코드 푸시 시간 | `"2024-01-15T15:30:00Z"` |
 
 
-AI 챗봇에게 유용할 것 같은 정보는 아래와 같습니다.
+**AI 챗봇에 유용한 정보:**
 
 - `language`: 주요 언어
-- `topics`: 토픽/태그. 사용자가 직접 설정한 키워드
-- `name`: 레포지토리 이름 → 이름에서 힌트를 얻을 수 있음
-- `description`: 설명 사용자가 작성한 레포지토리 설명
-- `default_branch`: 기본 브랜치. 어느 브랜치 분석할지 결정
+- `topics`: 토픽/태그 (사용자가 직접 설정한 키워드)
+- `name`: 레포지토리 이름 (프로젝트 성격 파악)
+- `description`: 사용자가 작성한 레포지토리 설명
+- `default_branch`: 기본 브랜치 (분석할 브랜치 결정)
 
 ### 서버 상태 확인
 
@@ -253,3 +253,122 @@ AI 챗봇에게 유용할 것 같은 정보는 아래와 같습니다.
 - **요청 헤더**: 없음
 - **응답**
     - 200 OK
+
+## 응답 포맷
+
+모든 API는 일관된 응답 포맷을 사용합니다.
+
+**특징:**
+- 명확한 역할: `message`(사용자용), `error_code`(개발자용)
+- 일관성: 성공/실패 모두 동일한 패턴
+
+### 성공 응답
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    // 실제 데이터
+  }
+}
+```
+
+### 리스트 응답
+
+```json
+{
+  "success": true,
+  "message": "Success",
+  "data": {
+    "items": [/* 배열 데이터 */],
+    "page": 1,
+    "per_page": 30,
+    "total": 100
+  }
+}
+```
+
+### 에러 응답
+
+```json
+{
+  "success": false,
+  "message": "Error message",
+  "error_code": "ERROR_CODE"
+}
+```
+
+## 예외처리
+
+체계적인 예외처리로 일관된 에러 응답을 제공합니다.
+
+### 에러 코드
+
+| HTTP 상태 | 에러 코드 | 설명 |
+|-----------|-----------|------|
+| 401 | `AUTH_ERROR` | 인증 실패 |
+| 401 | `GITHUB_API_ERROR` | GitHub API 인증 실패 |
+| 404 | `REPO_NOT_FOUND` | 레포지토리 없음 |
+| 404 | `FILE_NOT_FOUND` | 파일 없음 |
+| 400 | `GITHUB_API_ERROR` | GitHub API 요청 실패 |
+| 500 | `INTERNAL_ERROR` | 서버 내부 오류 |
+
+### 인증 에러 예시
+
+```json
+{
+  "success": false,
+  "message": "GitHub token not found",
+  "error_code": "AUTH_ERROR",
+  "data": null
+}
+```
+
+### GitHub API 에러 예시
+
+```json
+{
+  "success": false,
+  "message": "Repository facebook/react not found",
+  "error_code": "REPO_NOT_FOUND",
+  "data": null
+}
+```
+
+## 아키텍처
+
+### 프로젝트 구조
+
+```
+app/
+├── core/              # 핵심 설정 및 보안
+│   ├── config.py      # 환경 설정
+│   ├── security.py    # JWT 토큰 처리
+│   └── exceptions.py  # 커스텀 예외 클래스
+├── routers/           # API 라우터
+│   ├── auth.py        # 인증 관련 API
+│   ├── repos.py       # 레포지토리 관련 API
+│   └── health.py      # 헬스체크 API
+├── schemas/           # Pydantic 스키마
+│   ├── auth.py        # 인증 관련 데이터 모델
+│   └── common.py      # 공통 응답 스키마
+├── auth_service.py    # 인증 비즈니스 로직
+├── github_service.py  # GitHub API 비즈니스 로직
+├── database.py        # 데이터베이스 설정
+└── main.py           # FastAPI 앱 진입점
+```
+
+### 서비스 레이어
+
+비즈니스 로직은 서비스 레이어로 분리되어 있습니다:
+
+- **AuthService**: GitHub OAuth, JWT 토큰 관리
+- **GitHubService**: GitHub API 호출, 데이터 변환
+
+### 보안
+
+- JWT 토큰 기반 인증
+- GitHub OAuth 2.0
+- CORS 설정으로 허용된 도메인만 접근 가능
+- 환경변수/Parameter Store를 통한 민감 정보 관리
