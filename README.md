@@ -343,25 +343,31 @@ URL 정보
 ```
 app/
 ├── core/              # 핵심 설정 및 보안
+│   ├── __init__.py
 │   ├── config.py      # 환경 설정
 │   ├── security.py    # JWT 토큰 처리
 │   └── exceptions.py  # 커스텀 예외 클래스
 ├── routers/           # API 라우터
+│   ├── __init__.py
 │   ├── auth.py        # 인증 관련 API
 │   ├── repos.py       # 레포지토리 관련 API
 │   └── health.py      # 헬스체크 API
 ├── schemas/           # Pydantic 스키마
+│   ├── __init__.py
 │   ├── auth.py        # 인증 관련 데이터 모델
 │   └── common.py      # 공통 응답 스키마
-├── auth_service.py    # 인증 비즈니스 로직
-├── github_service.py  # GitHub API 비즈니스 로직
+├── service/           # 비즈니스 로직 서비스
+│   ├── __init__.py
+│   ├── auth_service.py    # 인증 비즈니스 로직
+│   └── github_service.py  # GitHub API 비즈니스 로직
+├── __init__.py
 ├── database.py        # 데이터베이스 설정
 └── main.py           # FastAPI 앱 진입점
 ```
 
 ### 서비스 레이어
 
-비즈니스 로직은 서비스 레이어로 분리되어 있습니다:
+비즈니스 로직은 `app/service/` 디렉토리의 서비스 레이어로 분리되어 있습니다:
 
 - **AuthService**: GitHub OAuth, JWT 토큰 관리
 - **GitHubService**: GitHub API 호출, 데이터 변환
