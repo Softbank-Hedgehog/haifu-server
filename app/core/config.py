@@ -20,6 +20,10 @@ class Settings(BaseSettings):
 
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
+    ALLOWED_FRONTEND_URLS: list = [
+        "http://localhost:3000",
+        "https://softbank-hedgehog.github.io/haifu-client/"
+    ]
 
     # AWS
     AWS_REGION: str = "ap-northeast-2"
@@ -47,7 +51,11 @@ def get_settings() -> Settings:
             GITHUB_CLIENT_ID=get_param("/haifu/github-client-id"),
             GITHUB_CLIENT_SECRET=get_param("/haifu/github-client-secret"),
             JWT_SECRET_KEY=get_param("/haifu/jwt-secret"),
-            FRONTEND_URL=get_param("/haifu/frontend-url")
+            FRONTEND_URL=get_param("/haifu/frontend-url"),
+            ALLOWED_FRONTEND_URLS=[
+                "http://localhost:3000",
+                "https://softbank-hedgehog.github.io/haifu-client/"
+            ]
         )
     except Exception as e:
         print(f"파라미터 스토어를 로드하는데 실패 했습니다.: {e}")
