@@ -107,3 +107,52 @@ async def logout():
     return success_response(
         message="Logged out successfully"
     )
+
+
+@router.post("/test-token", response_model=ApiResponse[dict], responses=common_responses)
+async def generate_test_token(
+    user_id: int = Query(default=12345678, description="테스트용 User ID"),
+    username: str = Query(default="testuser", description="테스트용 Username")
+):
+    """
+    테스트용 JWT 토큰 생성 (로컬 개발 환경 전용)
+    
+    ⚠️ 주의: 이 엔드포인트는 로컬 개발 환경에서만 사용하세요.
+    프로덕션 환경에서는 GitHub OAuth를 통해서만 토큰을 발급받을 수 있습니다.
+    
+    Args:
+        user_id: 테스트용 GitHub User ID
+        username: 테스트용 GitHub Username
+    
+    Returns:
+        JWT 토큰과 사용자 정보
+    """
+    import os
+    # 프로덕션 환경에서는 접근 불가
+    if os.getenv("AWS_LAMBDA_FUNCTION_NAME") is not None and settings.ENVIRONMENT != "local":
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=403,
+            detail="Test token generation is only available in local development environment"
+        )
+    
+    # 테스트용 사용자 정보
+    user_info = {
+        'user_id': user_id,
+        'username': username,
+        'email': f"{username}@example.com",
+        'avatar_url': f"https://avatars.githubusercontent.com/u/{user_id}?v=4",
+        'name': username,
+        'github_access_token': 'test_token_for_local_development'
+    }
+    
+    # JWT 토큰 생성
+    jwt_token = AuthService.create_jwt_token(user_info)
+    
+    return success_response(
+        data={
+            "token": jwt_token,
+            "user": user_info
+        },
+        message="Test token generated successfully (local development only)"
+    )

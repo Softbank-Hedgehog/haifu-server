@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # AWS
     AWS_REGION: str = "ap-northeast-2"
 
+    # DynamoDB
+    DYNAMODB_ENDPOINT: str = ""  # 로컬이면 http://localhost:8000, 프로덕션이면 비워둠
+    DYNAMODB_PROJECTS_TABLE: str = "haifu-projects"
+    DYNAMODB_SERVICES_TABLE: str = "haifu-services"
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
