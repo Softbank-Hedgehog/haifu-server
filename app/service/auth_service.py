@@ -18,10 +18,21 @@ class AuthService:
         if origin not in settings.ALLOWED_FRONTEND_URLS:
             origin = settings.FRONTEND_URL
         
+        # 환경에 따라 redirect_uri 동적으로 설정
+        import os
+        if settings.ENVIRONMENT == "local" or os.getenv("AWS_LAMBDA_FUNCTION_NAME") is None:
+            # 로컬 환경: localhost 사용
+            backend_url = "http://localhost:8001"
+        else:
+            # 프로덕션 환경: Lambda URL 사용
+            backend_url = "https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws"
+        
+        redirect_uri = f"{backend_url}/api/auth/github/callback"
+        
         return (
             f"https://github.com/login/oauth/authorize"
             f"?client_id={settings.GITHUB_CLIENT_ID}"
-            f"&redirect_uri=https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws/api/auth/github/callback"
+            f"&redirect_uri={redirect_uri}"
             f"&scope=repo,user:email"
             f"&state={origin}"
         )
