@@ -15,22 +15,25 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.get("/github/login", response_model=GitHubLoginUrlResponse)
-async def github_login(origin: str = Query(default="http://localhost:3000")):
+async def github_login(origin: str | None = Query(default=None)):
     """
     GitHub OAuth 로그인 URL 반환
 
     프론트엔드에서 이 URL로 리디렉션하여 사용자를 GitHub 로그인 페이지로 보냄
     """
     # origin 검증
-    if origin not in settings.ALLOWED_FRONTEND_URLS:
-        origin = settings.FRONTEND_URL
+    if origin and origin in settings.ALLOWED_FRONTEND_URLS:
+        state = origin
+    else:
+        # 기본은 항상 설정에서 가져온 FRONTEND_URL
+        state = settings.FRONTEND_URL
     
     github_auth_url = (
         f"https://github.com/login/oauth/authorize"
         f"?client_id={settings.GITHUB_CLIENT_ID}"
         f"&redirect_uri=https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws/api/auth/github/callback"
         f"&scope=repo,user:email"
-        f"&state={origin}"
+        f"&state={state}"
     )
 
     return GitHubLoginUrlResponse(url=github_auth_url)
@@ -39,7 +42,7 @@ async def github_login(origin: str = Query(default="http://localhost:3000")):
 @router.get("/github/callback")  # response_model 제거
 async def github_callback(
     code: str = Query(description="Github OAuth authorization code"),
-    state: str = Query(default="http://localhost:3000")
+    state: str | None = Query(default=None)
 ):
     """
     GitHub OAuth 콜백 처리
@@ -74,7 +77,11 @@ async def github_callback(
             )
 
         # state에서 프론트엔드 URL 검증
-        frontend_url = state if state in settings.ALLOWED_FRONTEND_URLS else settings.FRONTEND_URL
+        # frontend_url = state if state in settings.ALLOWED_FRONTEND_URLS else settings.FRONTEND_URL
+        if state and state in settings.ALLOWED_FRONTEND_URLS:
+            frontend_url = state
+        else:
+            frontend_url = settings.FRONTEND_URL
         
         if token_response.status_code != 200:
             # 에러 시에도 프론트엔드로 리다이렉트 (에러 메시지 포함)
