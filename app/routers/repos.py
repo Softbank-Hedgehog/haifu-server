@@ -93,3 +93,25 @@ async def get_file_content(
         data=file_info,
         message="File content fetched successfully"
     )
+
+
+@router.get("/{owner}/{repo}/branches", response_model=ApiResponse[list], responses=common_responses)
+async def get_repository_branches(
+        owner: str,
+        repo: str,
+        current_user: dict = Depends(get_current_user)
+):
+    """
+    레포지토리 브랜치 목록 조회
+
+    서비스 생성 시 브랜치 선택을 위해 사용됩니다.
+    """
+    github_token = current_user.get('github_access_token')
+    github_service = GitHubService(github_token)
+
+    branches = await github_service.get_repository_branches(owner, repo)
+
+    return success_response(
+        data=branches,
+        message="Branches fetched successfully"
+    )

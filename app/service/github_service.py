@@ -181,3 +181,27 @@ class GitHubService:
             'sha': file_data['sha'],
             'download_url': file_data.get('download_url')
         }
+
+    async def get_repository_branches(self, owner: str, repo: str) -> List[str]:
+        """레포지토리 브랜치 목록 조회"""
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f'{self.BASE_URL}/repos/{owner}/{repo}/branches',
+                    headers=self.headers,
+                    timeout=10.0
+                )
+        except httpx.RequestError:
+            raise GitHubAPIException(503, "GitHub API connection failed")
+
+        if response.status_code == 401:
+            raise AuthenticationException("Invalid GitHub token")
+        elif response.status_code == 404:
+            raise GitHubAPIException(404, f"Repository {owner}/{repo} not found")
+        elif response.status_code != 200:
+            raise GitHubAPIException(response.status_code, "Failed to fetch branches")
+
+        branches_data = response.json()
+
+        # 브랜치명 리스트만 반환
+        return [branch['name'] for branch in branches_data]
