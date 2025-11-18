@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     ALLOWED_FRONTEND_URLS: list = [
         "http://localhost:3000",
-        "https://softbank-hedgehog.github.io/haifu-client/"
+        "https://softbank-hedgehog.github.io/haifu-client"
     ]
 
     # AWS
@@ -54,7 +54,7 @@ def get_settings() -> Settings:
             FRONTEND_URL=get_param("/haifu/frontend-url"),
             ALLOWED_FRONTEND_URLS=[
                 "http://localhost:3000",
-                "https://softbank-hedgehog.github.io/haifu-client/"
+                "https://softbank-hedgehog.github.io/haifu-client"
             ]
         )
     except Exception as e:
