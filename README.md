@@ -2,6 +2,10 @@
 
 > SoftBank Hackerton 2025의 Hedgehog 팀 백엔드 레포입니다.
 
+## 목차
+
+- [환경 설정](#환경-설정)
+- [로컬 개발 환경 구성](#로컬-개발-환경-구성)
 - [API](#api)
     - 인증
       - [Github 로그인 URL 조회](#github-로그인-url-조회)
@@ -12,6 +16,80 @@
       - [레포지토리 상세 조회](#레포지토리-상세-조회)
     - 기타
       - [서버 상태 확인](#7-서버-상태-확인)
+
+## 환경 설정
+
+### 환경변수 설정
+
+프로젝트 루트에 `.env` 파일을 생성하고 필요한 환경변수를 설정하세요.
+
+```bash
+# .env.example 파일 복사
+cp .env.example .env
+
+# .env 파일 수정 (실제 값 입력)
+```
+
+**필수 환경변수:**
+
+| 변수명 | 설명 | 발급 방법 |
+|--------|------|----------|
+| `GITHUB_CLIENT_ID` | GitHub OAuth Client ID | [GitHub OAuth App 생성](https://github.com/settings/developers) |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth Client Secret | GitHub OAuth App 페이지에서 발급 |
+| `JWT_SECRET_KEY` | JWT 토큰 서명용 비밀키 | `openssl rand -hex 32` 명령어로 생성 |
+| `DYNAMODB_ENDPOINT` | DynamoDB 엔드포인트 (로컬: `http://localhost:8000`) | - |
+
+**자세한 환경변수 설명은 [팀 노션 .Env 페이지](팀_노션_링크) 참고**
+
+## 로컬 개발 환경 구성
+
+### 1. Python 가상환경 생성
+
+```bash
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+```
+
+### 2. 의존성 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3. DynamoDB Local 실행
+
+```bash
+# Docker Compose로 DynamoDB Local 실행
+docker-compose up -d
+
+# 테이블 생성
+python scripts/create_local_tables.py
+```
+
+**테이블 확인:**
+```bash
+aws dynamodb list-tables --endpoint-url http://localhost:8000
+```
+
+### 4. FastAPI 서버 실행
+
+```bash
+# 개발 서버 실행 (자동 리로드)
+uvicorn app.main:app --reload --port 8001
+
+# Swagger UI 접속
+# http://localhost:8001/docs
+```
+
+### 5. 테스트
+
+```bash
+# 서버 상태 확인
+curl http://localhost:8001/
+
+# GitHub 로그인 URL 조회 (JWT 토큰 필요 없음)
+curl http://localhost:8001/api/auth/github/login
+```
 
 ## API
 
