@@ -42,7 +42,16 @@ class ProjectService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create project: {str(e)}")
 
-        return ProjectResponse(**item)
+        # ProjectResponse는 'id' 필드를 요구하므로 'project_id'를 'id'로 매핑
+        response_data = {
+            'id': item['project_id'],
+            'name': item['name'],
+            'description': item['description'],
+            'user_id': item['user_id'],
+            'created_at': item['created_at'],
+            'updated_at': item['updated_at']
+        }
+        return ProjectResponse(**response_data)
 
     @staticmethod
     async def get_project(user_id: int, project_id: str) -> ProjectResponse:
@@ -70,7 +79,16 @@ class ProjectService:
         if not item:
             raise HTTPException(status_code=404, detail="Project not found")
 
-        return ProjectResponse(**item)
+        # ProjectResponse는 'id' 필드를 요구하므로 'project_id'를 'id'로 매핑
+        response_data = {
+            'id': item['project_id'],
+            'name': item['name'],
+            'description': item.get('description'),
+            'user_id': item['user_id'],
+            'created_at': item['created_at'],
+            'updated_at': item['updated_at']
+        }
+        return ProjectResponse(**response_data)
 
     @staticmethod
     async def list_projects(user_id: int) -> List[ProjectResponse]:
@@ -95,7 +113,15 @@ class ProjectService:
         # updated_at 기준 정렬 (최신순)
         items.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
 
-        return [ProjectResponse(**item) for item in items]
+        # ProjectResponse는 'id' 필드를 요구하므로 'project_id'를 'id'로 매핑
+        return [ProjectResponse(
+            id=item['project_id'],
+            name=item['name'],
+            description=item.get('description'),
+            user_id=item['user_id'],
+            created_at=item['created_at'],
+            updated_at=item['updated_at']
+        ) for item in items]
 
     @staticmethod
     async def update_project(user_id: int, project_id: str, data: ProjectUpdate) -> ProjectResponse:
@@ -138,7 +164,16 @@ class ProjectService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to update project: {str(e)}")
 
-        return ProjectResponse(**updated_item)
+        # ProjectResponse는 'id' 필드를 요구하므로 'project_id'를 'id'로 매핑
+        response_data = {
+            'id': updated_item['project_id'],
+            'name': updated_item['name'],
+            'description': updated_item.get('description'),
+            'user_id': updated_item['user_id'],
+            'created_at': updated_item['created_at'],
+            'updated_at': updated_item['updated_at']
+        }
+        return ProjectResponse(**response_data)
 
     @staticmethod
     async def delete_project(user_id: int, project_id: str) -> bool:

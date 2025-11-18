@@ -66,7 +66,27 @@ class ServiceService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create service: {str(e)}")
 
-        return ServiceResponse(**item)
+        # ServiceResponse는 'id' 필드를 요구하므로 'service_id'를 'id'로 매핑
+        response_data = {
+            'id': item['service_id'],
+            'project_id': item['project_id'],
+            'name': item['name'],
+            'repo_owner': item['repo_owner'],
+            'repo_name': item['repo_name'],
+            'branch': item['branch'],
+            'runtime': item['runtime'],
+            'cpu': item['cpu'],
+            'memory': item['memory'],
+            'port': item['port'],
+            'build_command': item.get('build_command'),
+            'start_command': item.get('start_command'),
+            'environment_variables': item.get('environment_variables'),
+            'status': item['status'],
+            'deployment_url': item.get('deployment_url'),
+            'created_at': item['created_at'],
+            'updated_at': item['updated_at']
+        }
+        return ServiceResponse(**response_data)
 
     @staticmethod
     async def get_service(user_id: int, service_id: str, project_id: str) -> ServiceResponse:
@@ -99,7 +119,27 @@ class ServiceService:
         if item.get('user_id') != user_id:
             raise HTTPException(status_code=403, detail="Forbidden: Access denied")
 
-        return ServiceResponse(**item)
+        # ServiceResponse는 'id' 필드를 요구하므로 'service_id'를 'id'로 매핑
+        response_data = {
+            'id': item['service_id'],
+            'project_id': item['project_id'],
+            'name': item['name'],
+            'repo_owner': item['repo_owner'],
+            'repo_name': item['repo_name'],
+            'branch': item['branch'],
+            'runtime': item['runtime'],
+            'cpu': item['cpu'],
+            'memory': item['memory'],
+            'port': item['port'],
+            'build_command': item.get('build_command'),
+            'start_command': item.get('start_command'),
+            'environment_variables': item.get('environment_variables'),
+            'status': item['status'],
+            'deployment_url': item.get('deployment_url'),
+            'created_at': item['created_at'],
+            'updated_at': item['updated_at']
+        }
+        return ServiceResponse(**response_data)
 
     @staticmethod
     async def list_services(user_id: int, project_id: str) -> List[ServiceResponse]:
@@ -127,7 +167,26 @@ class ServiceService:
         # updated_at 기준 정렬 (최신순)
         items.sort(key=lambda x: x.get('updated_at', ''), reverse=True)
 
-        return [ServiceResponse(**item) for item in items]
+        # ServiceResponse는 'id' 필드를 요구하므로 'service_id'를 'id'로 매핑
+        return [ServiceResponse(
+            id=item['service_id'],
+            project_id=item['project_id'],
+            name=item['name'],
+            repo_owner=item['repo_owner'],
+            repo_name=item['repo_name'],
+            branch=item['branch'],
+            runtime=item['runtime'],
+            cpu=item['cpu'],
+            memory=item['memory'],
+            port=item['port'],
+            build_command=item.get('build_command'),
+            start_command=item.get('start_command'),
+            environment_variables=item.get('environment_variables'),
+            status=item['status'],
+            deployment_url=item.get('deployment_url'),
+            created_at=item['created_at'],
+            updated_at=item['updated_at']
+        ) for item in items]
 
     @staticmethod
     async def update_service(
@@ -205,7 +264,27 @@ class ServiceService:
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to update service: {str(e)}")
 
-        return ServiceResponse(**updated_item)
+        # ServiceResponse는 'id' 필드를 요구하므로 'service_id'를 'id'로 매핑
+        response_data = {
+            'id': updated_item['service_id'],
+            'project_id': updated_item['project_id'],
+            'name': updated_item['name'],
+            'repo_owner': updated_item['repo_owner'],
+            'repo_name': updated_item['repo_name'],
+            'branch': updated_item['branch'],
+            'runtime': updated_item['runtime'],
+            'cpu': updated_item['cpu'],
+            'memory': updated_item['memory'],
+            'port': updated_item['port'],
+            'build_command': updated_item.get('build_command'),
+            'start_command': updated_item.get('start_command'),
+            'environment_variables': updated_item.get('environment_variables'),
+            'status': updated_item['status'],
+            'deployment_url': updated_item.get('deployment_url'),
+            'created_at': updated_item['created_at'],
+            'updated_at': updated_item['updated_at']
+        }
+        return ServiceResponse(**response_data)
 
     @staticmethod
     async def delete_service(user_id: int, service_id: str, project_id: str) -> bool:
