@@ -1,4 +1,6 @@
 # app/routers/auth.py
+from email.policy import default
+
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from app.core.config import settings
@@ -10,10 +12,11 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 @router.get("/github/login", response_model=ApiResponse[GitHubLoginUrl], responses=common_responses)
-async def github_login(origin: str = Query(default="http://localhost:3000")):
+async def github_login(origin: str = Query(default=None)):
     """
     GitHub OAuth 로그인 URL 반환
     """
+    origin = origin if origin in settings.ALLOWED_FRONTEND_URLS else settings.FRONTEND_URL
     github_auth_url = AuthService.generate_github_auth_url(origin)
     
     return success_response(
@@ -31,7 +34,7 @@ async def github_login(origin: str = Query(default="http://localhost:3000")):
 )
 async def github_callback(
     code: str = Query(description="Github OAuth authorization code"),
-    state: str = Query(default="http://localhost:3000")
+    state: str | None = Query(default=None)
 ):
     """
     GitHub OAuth 콜백 처리
