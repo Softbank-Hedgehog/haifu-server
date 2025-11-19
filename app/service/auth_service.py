@@ -4,13 +4,25 @@ from typing import Dict, Optional
 from app.core.config import settings
 from app.core.security import create_access_token
 from app.core.exceptions import GitHubAPIException
+from app.core.environment import Environment
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 class AuthService:
     """인증 관련 비즈니스 로직"""
     
+    # GitHub API URLs
+    GITHUB_OAUTH_URL = "https://github.com/login/oauth/authorize"
     GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
     GITHUB_USER_URL = "https://api.github.com/user"
     GITHUB_EMAILS_URL = "https://api.github.com/user/emails"
+    
+
+    
+    # OAuth settings
+    OAUTH_CALLBACK_PATH = "/api/auth/github/callback"
+    OAUTH_SCOPE = "repo,user:email"
     
     @staticmethod
     def generate_github_auth_url(origin: str) -> str:
@@ -19,21 +31,17 @@ class AuthService:
             origin = settings.FRONTEND_URL
         
         # 환경에 따라 redirect_uri 동적으로 설정
-        import os
-        if settings.ENVIRONMENT == "local" or os.getenv("AWS_LAMBDA_FUNCTION_NAME") is None:
-            # 로컬 환경: localhost 사용
-            backend_url = "http://localhost:8001"
-        else:
-            # 프로덕션 환경: Lambda URL 사용
-            backend_url = "https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws"
+        backend_url = Environment.get_backend_url()
+        redirect_uri = f"{backend_url}{AuthService.OAUTH_CALLBACK_PATH}"
         
-        redirect_uri = f"{backend_url}/api/auth/github/callback"
+        # 디버깅을 위한 로그 출력
+        logger.info(f"Environment: {Environment.get_environment_name()}, Backend URL: {backend_url}")
         
         return (
-            f"https://github.com/login/oauth/authorize"
+            f"{AuthService.GITHUB_OAUTH_URL}"
             f"?client_id={settings.GITHUB_CLIENT_ID}"
             f"&redirect_uri={redirect_uri}"
-            f"&scope=repo,user:email"
+            f"&scope={AuthService.OAUTH_SCOPE}"
             f"&state={origin}"
         )
     

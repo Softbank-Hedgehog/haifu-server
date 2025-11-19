@@ -2,6 +2,9 @@ import boto3
 from boto3.dynamodb.conditions import Key, Attr
 from typing import Dict, List, Any, Optional
 from app.core.config import settings
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 
 def get_dynamodb_resource():
@@ -12,7 +15,7 @@ def get_dynamodb_resource():
     """
     if settings.DYNAMODB_ENDPOINT:
         # 로컬 환경: DynamoDB Local 사용
-        print(f"🔧 Using DynamoDB Local at {settings.DYNAMODB_ENDPOINT}")
+        logger.info(f"Using DynamoDB Local at {settings.DYNAMODB_ENDPOINT}")
         return boto3.resource(
             'dynamodb',
             endpoint_url=settings.DYNAMODB_ENDPOINT,
@@ -22,7 +25,7 @@ def get_dynamodb_resource():
         )
     else:
         # 프로덕션 환경: 실제 AWS DynamoDB
-        print(f"☁️  Using AWS DynamoDB in region {settings.AWS_REGION}")
+        logger.info(f"Using AWS DynamoDB in region {settings.AWS_REGION}")
         return boto3.resource(
             'dynamodb',
             region_name=settings.AWS_REGION
