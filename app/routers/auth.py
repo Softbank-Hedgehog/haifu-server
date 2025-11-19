@@ -1,9 +1,11 @@
 # app/routers/auth.py
 from email.policy import default
+from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import RedirectResponse
 from app.core.config import settings
+from app.core.environment import Environment
 from app.core.security import get_current_user
 from app.service.auth_service import AuthService
 from app.schemas.common import success_response, ApiResponse, GitHubLoginUrl, UserInfo, common_responses
@@ -34,7 +36,7 @@ async def github_login(origin: str = Query(default=None)):
 )
 async def github_callback(
     code: str = Query(description="Github OAuth authorization code"),
-    state: str | None = Query(default=None)
+    state: Optional[str] = Query(default=None)
 ):
     """
     GitHub OAuth 콜백 처리
@@ -127,9 +129,8 @@ async def generate_test_token(
     Returns:
         JWT 토큰과 사용자 정보
     """
-    import os
     # 프로덕션 환경에서는 접근 불가
-    if os.getenv("AWS_LAMBDA_FUNCTION_NAME") is not None and settings.ENVIRONMENT != "local":
+    if not Environment.is_local():
         from fastapi import HTTPException
         raise HTTPException(
             status_code=403,
