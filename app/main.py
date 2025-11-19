@@ -1,28 +1,23 @@
 # app/main.py
-import os
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 from app.core.config import settings
+from app.core.environment import Environment
+from app.core.logging import get_logger
 from app.routers import auth, repos, health, projects, services
 from app.core.exceptions import http_exception_handler, general_exception_handler
 from app.schemas.common import success_response, ApiResponse, ServerInfo, common_responses
 
-# localhost에서만 Swagger 활성화 여부 판단
-def is_localhost() -> bool:
-    """로컬 환경인지 확인"""
-    return (
-        settings.ENVIRONMENT == "local" or 
-        os.getenv("AWS_LAMBDA_FUNCTION_NAME") is None
-    )
+logger = get_logger(__name__)
 
 # FastAPI 앱 생성
 app = FastAPI(
     title=settings.APP_NAME,
     description="GitHub-based deployment automation service",
     version="1.0.0",
-    docs_url="/docs" if is_localhost() else None,
-    redoc_url="/redoc" if is_localhost() else None,
+    docs_url="/docs" if Environment.is_local() else None,
+    redoc_url="/redoc" if Environment.is_local() else None,
 )
 
 # CORS 설정

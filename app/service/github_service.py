@@ -3,6 +3,9 @@ import httpx
 import base64
 from typing import Optional, List, Dict, Any
 from app.core.exceptions import GitHubAPIException, AuthenticationException
+from app.core.logging import get_logger
+
+logger = get_logger(__name__)
 
 class GitHubService:
     """GitHub API 관련 비즈니스 로직"""

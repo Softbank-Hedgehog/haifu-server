@@ -49,7 +49,8 @@ def get_settings() -> Settings:
                 response = ssm.get_parameter(Name=name, WithDecryption=True)
                 return response['Parameter']['Value']
             except Exception as e:
-                print(f"다음 파라미터를 가져오는데 실패했습니다: {name}: {e}")
+                import logging
+                logging.getLogger(__name__).error(f"Failed to get parameter {name}: {e}")
                 return ""
 
 
@@ -65,7 +66,8 @@ def get_settings() -> Settings:
             ]
         )
     except Exception as e:
-        print(f"파라미터 스토어를 로드하는데 실패 했습니다.: {e}")
+        import logging
+        logging.getLogger(__name__).error(f"Failed to load parameter store: {e}")
         return Settings()
 
 settings = get_settings()
