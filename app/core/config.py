@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # AWS
     AWS_REGION: str = "ap-northeast-2"
 
+    # Server
+    PORT: int = 8000
+
     # DynamoDB
     DYNAMODB_ENDPOINT: str = ""  # 로컬이면 http://localhost:8000, 프로덕션이면 비워둠
     DYNAMODB_PROJECTS_TABLE: str = "haifu-projects"
