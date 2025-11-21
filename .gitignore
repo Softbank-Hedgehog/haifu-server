@@ -1,7 +1,10 @@
 .env
+.env.development
+.env.production
 .idea/
 __pycache__/
-*.pyc
+*.pyc\
+venv
 
 # DynamoDB Local
 dynamodb-data/
