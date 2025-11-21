@@ -59,7 +59,7 @@ async def deployments_ws(
 @router.post("/debug/deployments/{channel_id}/ping")
 async def debug_ping(channel_id: str):
     """
-    Postman으로 WS 테스트할 때 쓰는 임시 엔드포인트.
+    Postman으로 WS 테스트할 때 쓰는 임시 HTTP 엔드포인트.
     """
     update = DeploymentUpdate(
         channel_id=channel_id,
