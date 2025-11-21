@@ -20,9 +20,19 @@ class Settings(BaseSettings):
 
     # Frontend
     FRONTEND_URL: str = "http://localhost:3000"
+    ALLOWED_FRONTEND_URLS: list = [
+        "http://localhost:3000",
+        "https://softbank-hedgehog.github.io",
+        "https://softbank-hedgehog.github.io/haifu-client"
+    ]
 
     # AWS
     AWS_REGION: str = "ap-northeast-2"
+
+    # DynamoDB
+    DYNAMODB_ENDPOINT: str = ""  # 로컬이면 http://localhost:8000, 프로덕션이면 비워둠
+    DYNAMODB_PROJECTS_TABLE: str = "haifu-projects"
+    DYNAMODB_SERVICES_TABLE: str = "haifu-services"
 
     class Config:
         env_file = ".env"
@@ -39,7 +49,8 @@ def get_settings() -> Settings:
                 response = ssm.get_parameter(Name=name, WithDecryption=True)
                 return response['Parameter']['Value']
             except Exception as e:
-                print(f"다음 파라미터를 가져오는데 실패했습니다: {name}: {e}")
+                import logging
+                logging.getLogger(__name__).error(f"Failed to get parameter {name}: {e}")
                 return ""
 
 
@@ -47,10 +58,16 @@ def get_settings() -> Settings:
             GITHUB_CLIENT_ID=get_param("/haifu/github-client-id"),
             GITHUB_CLIENT_SECRET=get_param("/haifu/github-client-secret"),
             JWT_SECRET_KEY=get_param("/haifu/jwt-secret"),
-            FRONTEND_URL=get_param("/haifu/frontend-url")
+            FRONTEND_URL=get_param("/haifu/frontend-url"),
+            ALLOWED_FRONTEND_URLS=[
+                "http://localhost:3000",
+                "https://softbank-hedgehog.github.io",
+                "https://softbank-hedgehog.github.io/haifu-client"
+            ]
         )
     except Exception as e:
-        print(f"파라미터 스토어를 로드하는데 실패 했습니다.: {e}")
+        import logging
+        logging.getLogger(__name__).error(f"Failed to load parameter store: {e}")
         return Settings()
 
 settings = get_settings()
