@@ -5,7 +5,7 @@ from app.service.github_service import GitHubService
 from typing import Any
 from app.schemas.common import success_response, list_response, ApiResponse, Repository, RepositoryDetail, FileContent, ListData, common_responses
 
-router = APIRouter(prefix="/api/repos", tags=["Repositories"])
+router = APIRouter(prefix="/repos", tags=["Repositories"])
 
 
 @router.get("/list", response_model=ApiResponse[ListData[Repository]], responses=common_responses)

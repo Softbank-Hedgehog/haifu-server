@@ -8,7 +8,7 @@ from app.schemas.service import ServiceCreate, ServiceUpdate, ServiceResponse
 from app.service.service_service import ServiceService
 
 
-router = APIRouter(prefix="/api", tags=["Services"])
+router = APIRouter(tags=["Services"])
 
 
 @router.post(

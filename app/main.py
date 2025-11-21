@@ -34,11 +34,11 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, general_exception_handler)
 
 # 라우터 등록
-app.include_router(auth.router)
-app.include_router(repos.router)
-app.include_router(projects.router)
-app.include_router(services.router)
-app.include_router(health.router)
+app.include_router(auth.router, prefix="/api")
+app.include_router(repos.router, prefix="/api")
+app.include_router(projects.router, prefix="/api")
+app.include_router(services.router, prefix="/api")
+app.include_router(health.router)  # health는 루트에 유지
 
 @app.get("/", response_model=ApiResponse[ServerInfo], responses=common_responses)
 def root():
