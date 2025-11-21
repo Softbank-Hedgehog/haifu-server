@@ -5,7 +5,7 @@ from mangum import Mangum
 from app.core.config import settings
 from app.core.environment import Environment
 from app.core.logging import get_logger
-from app.routers import auth, repos, health, projects, services
+from app.routers import auth, repos, projects, services
 from app.core.exceptions import http_exception_handler, general_exception_handler
 from app.schemas.common import success_response, ApiResponse, ServerInfo, common_responses
 
@@ -38,7 +38,6 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(repos.router, prefix="/api")
 app.include_router(projects.router, prefix="/api")
 app.include_router(services.router, prefix="/api")
-app.include_router(health.router)  # health는 루트에 유지
 
 @app.get("/", response_model=ApiResponse[ServerInfo], responses=common_responses)
 def root():
@@ -73,6 +72,24 @@ def system_info():
 def readiness_check():
     """Readiness probe (Kubernetes/ECS용)"""
     return {"status": "ready"}
+
+@app.get("/api/info")
+def api_system_info():
+    """시스템 정보 (/api prefix용)"""
+    return system_info()
+
+@app.get("/api/ready")
+def api_readiness_check():
+    """준비상태 확인 (/api prefix용)"""
+    return readiness_check()
+
+@app.get("/api/health")
+def api_health_check():
+    """Health check (/api prefix용)"""
+    return success_response(
+        data={"status": "ok"},
+        message="Server is healthy"
+    )
 
 # Lambda Handler
 handler = Mangum(app, lifespan="off")
