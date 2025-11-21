@@ -2,6 +2,9 @@
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from app.websocket.channel_manager import channel_manager
+from app.schemas.deployment import DeploymentUpdate
+from app.service.deployment_stream import push_deployment_update
+from datetime import datetime
 import logging
 
 logger = logging.getLogger(__name__)
@@ -52,3 +55,21 @@ async def deployments_ws(
         logger.error(f"WebSocket error on channel {channel_id}: {e}")
         channel_manager.disconnect(channel_id, websocket)
         await websocket.close()
+
+@router.post("/debug/deployments/{channel_id}/ping")
+async def debug_ping(channel_id: str):
+    """
+    Postman으로 WS 테스트할 때 쓰는 임시 엔드포인트.
+    """
+    update = DeploymentUpdate(
+        channel_id=channel_id,
+        deployment_id="dep-debug",
+        project_id="proj-debug",
+        service_id="svc-debug",
+        status="DEPLOYING",
+        step="TEST_PING",
+        message="This is a test message from debug endpoint",
+        timestamp=datetime.utcnow().isoformat() + "Z",
+    )
+    await push_deployment_update(update)
+    return {"ok": True}
