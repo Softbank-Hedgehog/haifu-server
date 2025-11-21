@@ -75,20 +75,20 @@ aws dynamodb list-tables --endpoint-url http://localhost:8000
 
 ```bash
 # 개발 서버 실행 (자동 리로드)
-uvicorn app.main:app --reload --port 8001
+uvicorn app.main:app --reload --port 8000
 
 # Swagger UI 접속
-# http://localhost:8001/docs
+# http://localhost:8000/docs
 ```
 
 ### 5. 테스트
 
 ```bash
 # 서버 상태 확인
-curl http://localhost:8001/
+curl http://localhost:8000/
 
 # GitHub 로그인 URL 조회 (JWT 토큰 필요 없음)
-curl http://localhost:8001/api/auth/github/login
+curl http://localhost:8000/api/auth/github/login
 ```
 
 ## API
