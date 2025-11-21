@@ -16,8 +16,8 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="GitHub-based deployment automation service",
     version="1.0.0",
-    docs_url="/docs" if Environment.is_local() else None,
-    redoc_url="/redoc" if Environment.is_local() else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
 )
 
 # CORS 설정
