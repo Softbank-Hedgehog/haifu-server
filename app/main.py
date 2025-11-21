@@ -5,7 +5,7 @@ from mangum import Mangum
 from app.core.config import settings
 from app.core.environment import Environment
 from app.core.logging import get_logger
-from app.routers import auth, repos, health, projects, services
+from app.routers import auth, repos, health, projects, services, deploy_ws
 from app.core.exceptions import http_exception_handler, general_exception_handler
 from app.schemas.common import success_response, ApiResponse, ServerInfo, common_responses
 
@@ -39,6 +39,7 @@ app.include_router(repos.router)
 app.include_router(projects.router)
 app.include_router(services.router)
 app.include_router(health.router)
+app.include_router(deploy_ws.router)
 
 @app.get("/", response_model=ApiResponse[ServerInfo], responses=common_responses)
 def root():
