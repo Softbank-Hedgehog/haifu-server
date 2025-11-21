@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     ALLOWED_FRONTEND_URLS: list = [
         "http://localhost:3000",
         "https://softbank-hedgehog.github.io",
-        "https://softbank-hedgehog.github.io/haifu-client"
+        "https://softbank-hedgehog.github.io/haifu-client",
+        "https://d1yacqe3a2p57p.cloudfront.net",
     ]
 
     # AWS
