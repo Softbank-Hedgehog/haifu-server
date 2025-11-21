@@ -1,18 +1,26 @@
-FROM public.ecr.aws/lambda/python:3.10
+FROM python:3.10-slim
 
-# 작업 디렉토리 설정
-WORKDIR ${LAMBDA_TASK_ROOT}
+WORKDIR /app
 
 # Install dependencies
-COPY requirements.txt ${LAMBDA_TASK_ROOT}/
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY app/ ${LAMBDA_TASK_ROOT}/app/
-COPY lambda_function.py ${LAMBDA_TASK_ROOT}/
+COPY app/ ./app/
 
-# ENTRYPOINT 명시
-ENTRYPOINT ["/lambda-entrypoint.sh"]
+# Expose port
+EXPOSE 8000
 
-# Handler
-CMD ["lambda_function.lambda_handler"]
+# Install curl for health check
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:8000/health || exit 1
+
+# Install curl for health check
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Run the application
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
