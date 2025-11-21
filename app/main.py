@@ -52,5 +52,45 @@ def root():
         message=f"Welcome to {settings.APP_NAME}"
     )
 
+@app.get("/info")
+def system_info():
+    """시스템 정보 (컨테이너 확인용)"""
+    import os
+    import platform
+    from datetime import datetime
+    
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "environment": settings.ENVIRONMENT,
+        "platform": platform.platform(),
+        "python_version": platform.python_version(),
+        "hostname": os.getenv("HOSTNAME", "unknown"),
+        "port": settings.PORT,
+        "aws_region": settings.AWS_REGION
+    }
+
+@app.get("/ready")
+def readiness_check():
+    """Readiness probe (Kubernetes/ECS용)"""
+    return {"status": "ready"}
+
+@app.get("/api/info")
+def api_system_info():
+    """시스템 정보 (/api prefix용)"""
+    return system_info()
+
+@app.get("/api/ready")
+def api_readiness_check():
+    """준비상태 확인 (/api prefix용)"""
+    return readiness_check()
+
+@app.get("/api/health")
+def api_health_check():
+    """Health check (/api prefix용)"""
+    return success_response(
+        data={"status": "ok"},
+        message="Server is healthy"
+    )
+
 # Lambda Handler
 handler = Mangum(app, lifespan="off")
