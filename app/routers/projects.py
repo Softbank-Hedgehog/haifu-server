@@ -8,7 +8,7 @@ from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
 from app.service.project_service import ProjectService
 
 
-router = APIRouter(prefix="/api/projects", tags=["Projects"])
+router = APIRouter(prefix="/projects", tags=["Projects"])
 
 
 @router.post("", response_model=ApiResponse[ProjectResponse], responses=common_responses, status_code=201)

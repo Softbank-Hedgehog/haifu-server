@@ -10,7 +10,7 @@ from app.core.security import get_current_user
 from app.service.auth_service import AuthService
 from app.schemas.common import success_response, ApiResponse, GitHubLoginUrl, UserInfo, common_responses
 
-router = APIRouter(prefix="/api/auth", tags=["Authentication"])
+router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 
 @router.get("/github/login", response_model=ApiResponse[GitHubLoginUrl], responses=common_responses)
