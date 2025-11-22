@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class SourceSnapshotRequest(BaseModel):
     """GitHub 소스 스냅샷 생성 요청"""
     project_id: str = Field(..., description="프로젝트 ID")
-    tmp_id: str = Field(..., description="임시 ID")
+    tmp_id: int = Field(..., description="임시 ID")
     owner: str = Field(..., description="GitHub 레포지토리 소유자 (org/user)")
     repo: str = Field(..., description="GitHub 레포지토리 이름")
     branch: str = Field(..., description="브랜치 이름 (기본값: main)")

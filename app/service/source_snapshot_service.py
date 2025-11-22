@@ -58,11 +58,11 @@ class SourceSnapshotService:
         )
 
     @staticmethod
-    def _build_base_prefix(user_id: int, project_id: str, tmp_id: str) -> str:
+    def _build_base_prefix(user_id: int, project_id: str, tmp_id: int) -> str:
         return (
             f"user/{quote(str(user_id))}"
             f"/{quote(project_id)}"
-            f"/{quote(tmp_id)}"
+            f"/{quote(f'{tmp_id}')}"
         )
 
     @staticmethod
