@@ -69,17 +69,19 @@ class ProjectService:
             HTTPException: 프로젝트가 없거나 권한이 없는 경우
         """
         try:
+            # 테이블 PK에 맞게 project_id만 사용
             item = await get_item(
                 projects_table,
-                key={'user_id': user_id, 'project_id': project_id}
+                key={'project_id': project_id}
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to get project: {str(e)}")
 
-        if not item:
+            # 존재 + 권한 체크
+        if not item or item.get('user_id') != user_id:
+            # 권한 숨기고 싶으면 404로 통일하는 것도 가능
             raise HTTPException(status_code=404, detail="Project not found")
 
-        # ProjectResponse는 'id' 필드를 요구하므로 'project_id'를 'id'로 매핑
         response_data = {
             'id': item['project_id'],
             'name': item['name'],
