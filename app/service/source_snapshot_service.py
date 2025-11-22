@@ -2,7 +2,7 @@
 import os
 import logging
 from datetime import datetime
-from typing import Dict, Any, List, Union
+from typing import Dict, Any, List, Union, Optional
 from urllib.parse import quote
 
 import boto3
@@ -18,9 +18,20 @@ s3_client = boto3.client("s3")
 SOURCE_BUCKET_NAME = os.getenv("SOURCE_BUCKET_NAME")
 
 
+
 class SourceSnapshotServiceError(Exception):
-    """소스 스냅샷 관련 도메인 에러"""
-    pass
+    """
+    소스 스냅샷 생성 과정에서 발생하는 도메인 예외.
+
+    예:
+      - GitHub API에서 파일 목록을 가져오지 못한 경우
+      - S3 업로드에 실패한 경우
+      - 파일 개수 제한을 초과한 경우 등
+    """
+
+    def __init__(self, message: str, cause: Optional[Exception] = None):
+        super().__init__(message)
+        self.cause = cause
 
 
 class SourceSnapshotService:

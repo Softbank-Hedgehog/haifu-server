@@ -1,3 +1,5 @@
+# app/schemas/source_snapshot.py
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -19,3 +21,5 @@ class SourceSnapshotResponse(BaseModel):
     bucket: str = Field(..., description="업로드된 S3 버킷 이름")
     s3_prefix: str = Field(..., description="업로드된 파일들의 공통 prefix")
     file_count: int = Field(..., description="업로드된 파일 개수")
+
+
