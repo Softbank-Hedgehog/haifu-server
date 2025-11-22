@@ -1,7 +1,7 @@
 # app/service/source_snapshot_service.py
 import os
 import logging
-from typing import Dict, Any, List, Union, Optional
+from typing import Dict, Any, Optional
 from urllib.parse import quote
 
 import boto3
@@ -13,20 +13,10 @@ from app.schemas.source_snapshot import SourceSnapshotRequest, SourceSnapshotRes
 logger = logging.getLogger(__name__)
 
 s3_client = boto3.client("s3")
-
 SOURCE_BUCKET_NAME = os.getenv("SOURCE_BUCKET_NAME")
 
 
 class SourceSnapshotServiceError(Exception):
-    """
-    소스 스냅샷 생성 과정에서 발생하는 도메인 예외.
-
-    예:
-      - GitHub API에서 파일 목록을 가져오지 못한 경우
-      - S3 업로드에 실패한 경우
-      - 파일 개수 제한을 초과한 경우 등
-    """
-
     def __init__(self, message: str, cause: Optional[Exception] = None):
         super().__init__(message)
         self.cause = cause
@@ -39,33 +29,26 @@ class SourceSnapshotService:
         req: SourceSnapshotRequest,
         github: GitHubService,
     ) -> SourceSnapshotResponse:
-        """
-        GitHub 레포지토리의 특정 브랜치 / 경로 기준으로
-        전체 파일을 재귀적으로 순회하여 S3에 업로드한다.
-        """
         if not SOURCE_BUCKET_NAME:
             raise SourceSnapshotServiceError("SOURCE_BUCKET_NAME is not configured")
 
-        # user, project, service 기준 prefix 생성
-        # (예: user/76734067/PROJECT_ID/SERVICE_ID)
         base_prefix = SourceSnapshotService._build_base_prefix(
             user_id=user_id,
             project_id=req.project_id,
-            service_id=req.service_id,
+            tmp_id=req.tmp_id
         )
 
-        # source_path 기준 경로 정리
+        # source_path 없으면 레포 루트부터
         root_path = (req.source_path or "").strip("/")
 
-        # 루트 기준으로 재귀 순회하여 업로드
         file_count = await SourceSnapshotService._walk_and_upload(
             github=github,
             owner=req.owner,
             repo=req.repo,
-            current_path=root_path,   # "" 혹은 "src" 같은 루트 경로
+            current_path=root_path,  # "" 이면 레포 루트
             ref=req.branch,
             base_prefix=base_prefix,
-            root_path=root_path,      # 상대 경로 계산 기준
+            root_path=root_path,
         )
 
         return SourceSnapshotResponse(
@@ -75,18 +58,11 @@ class SourceSnapshotService:
         )
 
     @staticmethod
-    def _build_base_prefix(user_id: int, project_id: str, service_id: str) -> str:
-        """
-        user/{userId}/{projectId}/{serviceId} 형태 prefix 생성
-        URL-safe 하게 인코딩
-
-        예:
-          user/76734067/544f8aa-ad44-4477-8e0c-0008ac24e499/3b7a0c4e-...-service
-        """
+    def _build_base_prefix(user_id: int, project_id: str, tmp_id: str) -> str:
         return (
             f"user/{quote(str(user_id))}"
             f"/{quote(project_id)}"
-            f"/{quote(service_id)}"
+            f"/{quote(tmp_id)}"
         )
 
     @staticmethod
@@ -99,11 +75,6 @@ class SourceSnapshotService:
         base_prefix: str,
         root_path: str,
     ) -> int:
-        """
-        GitHub 레포지토리의 current_path 하위를 재귀적으로 순회하며
-        파일들을 S3에 업로드한다.
-        반환값은 업로드한 파일 개수.
-        """
         try:
             contents = await github.get_repository_contents(
                 owner=owner,
@@ -111,18 +82,26 @@ class SourceSnapshotService:
                 path=current_path,
                 ref=ref,
             )
-            # logger.info(f"[SNAPSHOT] path={current_path}, type={type(contents)}")
+            if isinstance(contents, list):
+                logger.info(
+                    f"[SNAPSHOT] Fetching path='{current_path}', "
+                    f"items={[(c.get('path'), c.get('type')) for c in contents]}"
+                )
+            else:
+                logger.info(
+                    f"[SNAPSHOT] Fetching path='{current_path}', "
+                    f"single item={(contents.get('path'), contents.get('type'))}"
+                )
         except Exception as e:
-            # logger.error(f"Failed to get contents for {owner}/{repo}:{current_path}@{ref} - {e}")
-            raise
+            raise SourceSnapshotServiceError(
+                f"Failed to get contents for {owner}/{repo}:{current_path}@{ref}",
+                cause=e,
+            )
 
         file_count = 0
 
-        # GitHub Contents API 특성:
-        # - 디렉토리: list[items]
-        # - 파일: 단일 dict
+        # 단일 파일인 경우
         if isinstance(contents, dict):
-            # 단일 파일인 경우
             if contents.get("type") == "file":
                 await SourceSnapshotService._upload_file_item(
                     github=github,
@@ -134,27 +113,33 @@ class SourceSnapshotService:
                     root_path=root_path,
                 )
                 return 1
-            # 혹시 모르는 타입
             return 0
 
+        # 디렉토리/리스트인 경우
         if not isinstance(contents, list):
-            # 방어적 처리
-            # logger.warning(f"Unexpected contents type for {owner}/{repo}:{current_path}: {type(contents)}")
             return 0
 
         for item in contents:
             item_type = item.get("type")
+            item_path = item.get("path", "")
+
             if item_type == "dir":
-                # 디렉토리면 재귀적으로 계속 들어감 (깊이 제한 없음)
+                # 혹시라도 자기 자신을 다시 타는 경우 방지
+                if item_path == current_path:
+                    logger.warning(f"[SNAPSHOT] Skip self directory path='{item_path}'")
+                    continue
+
+                logger.info(f"[SNAPSHOT] Entering directory: {item_path}")
                 file_count += await SourceSnapshotService._walk_and_upload(
                     github=github,
                     owner=owner,
                     repo=repo,
-                    current_path=item["path"],  # 예: "src/app", "src/app/routes"
+                    current_path=item_path,
                     ref=ref,
                     base_prefix=base_prefix,
                     root_path=root_path,
                 )
+
             elif item_type == "file":
                 await SourceSnapshotService._upload_file_item(
                     github=github,
@@ -167,22 +152,19 @@ class SourceSnapshotService:
                 )
                 file_count += 1
             else:
-                # symlink, submodule 등은 일단 스킵
-                logger.info(
-                    f"Skipping unsupported item type: {item_type} path={item.get('path')}"
-                )
+                logger.info(f"[SNAPSHOT] Skipping {item_type}: {item_path}")
 
         return file_count
 
     @staticmethod
     async def _upload_file_item(
-            github: GitHubService,
-            item: Dict[str, Any],
-            owner: str,
-            repo: str,
-            ref: str,
-            base_prefix: str,
-            root_path: str,
+        github: GitHubService,
+        item: Dict[str, Any],
+        owner: str,
+        repo: str,
+        ref: str,
+        base_prefix: str,
+        root_path: str,
     ) -> None:
         path = item["path"]
 
@@ -190,13 +172,12 @@ class SourceSnapshotService:
         rel_path = path
         if root_path:
             if path.startswith(root_path + "/"):
-                rel_path = path[len(root_path) + 1:]
+                rel_path = path[len(root_path) + 1 :]
             elif path == root_path:
                 rel_path = os.path.basename(path)
 
         s3_key = f"{base_prefix}/{rel_path}"
 
-        # 여기서 더 이상 download_url 사용 X
         file_bytes = await github.download_file_bytes(
             owner=owner,
             repo=repo,
@@ -213,10 +194,6 @@ class SourceSnapshotService:
 
     @staticmethod
     async def _download_file_bytes(download_url: str, headers: Dict[str, str]) -> bytes:
-        """
-        download_url을 통해 raw 파일 바이트를 가져온다.
-        private repo 대비를 위해 Authorization 헤더를 그대로 사용한다.
-        """
         async with httpx.AsyncClient() as client:
             resp = await client.get(download_url, headers=headers, timeout=30.0)
             if resp.status_code != 200:
