@@ -20,7 +20,48 @@ class GitHubService:
             'Authorization': f'Bearer {access_token}',
             'Accept': 'application/vnd.github.v3+json'
         }
-    
+
+    async def download_file_bytes(
+            self,
+            owner: str,
+            repo: str,
+            path: str,
+            ref: Optional[str] = None,
+    ) -> bytes:
+        """
+        GitHub Contents API를 사용해서 raw 파일 바이트를 직접 받아온다.
+        (download_url 사용 X, 항상 api.github.com 도메인만 사용)
+        """
+        params = {}
+        if ref:
+            params['ref'] = ref
+
+        url = f'{self.BASE_URL}/repos/{owner}/{repo}/contents/{path}'
+
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    url,
+                    headers={
+                        **self.headers,
+                        # raw 컨텐츠 직접 받기
+                        'Accept': 'application/vnd.github.v3.raw',
+                    },
+                    params=params,
+                    timeout=30.0,
+                )
+        except httpx.RequestError:
+            raise GitHubAPIException(503, "GitHub API connection failed (download_file_bytes)")
+
+        if response.status_code == 401:
+            raise AuthenticationException("Invalid GitHub token")
+        elif response.status_code == 404:
+            raise GitHubAPIException(404, f"File {path} not found")
+        elif response.status_code != 200:
+            raise GitHubAPIException(response.status_code, f"Failed to download file {path}")
+
+        return response.content
+
     async def get_user_repositories(self, page: int = 1, per_page: int = 30) -> List[Dict[str, Any]]:
         """사용자 레포지토리 목록 조회"""
         try:

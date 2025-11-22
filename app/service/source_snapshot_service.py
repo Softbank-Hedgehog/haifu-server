@@ -111,8 +111,9 @@ class SourceSnapshotService:
                 path=current_path,
                 ref=ref,
             )
+            # logger.info(f"[SNAPSHOT] path={current_path}, type={type(contents)}")
         except Exception as e:
-            logger.error(f"Failed to get contents for {owner}/{repo}:{current_path}@{ref} - {e}")
+            # logger.error(f"Failed to get contents for {owner}/{repo}:{current_path}@{ref} - {e}")
             raise
 
         file_count = 0
@@ -138,7 +139,7 @@ class SourceSnapshotService:
 
         if not isinstance(contents, list):
             # 방어적 처리
-            logger.warning(f"Unexpected contents type for {owner}/{repo}:{current_path}: {type(contents)}")
+            # logger.warning(f"Unexpected contents type for {owner}/{repo}:{current_path}: {type(contents)}")
             return 0
 
         for item in contents:
@@ -175,45 +176,34 @@ class SourceSnapshotService:
 
     @staticmethod
     async def _upload_file_item(
-        github: GitHubService,
-        item: Dict[str, Any],
-        owner: str,
-        repo: str,
-        ref: str,
-        base_prefix: str,
-        root_path: str,
+            github: GitHubService,
+            item: Dict[str, Any],
+            owner: str,
+            repo: str,
+            ref: str,
+            base_prefix: str,
+            root_path: str,
     ) -> None:
-        """
-        GitHub Contents API의 단일 file item을 S3에 업로드한다.
-        root_path 기준 상대 경로로 S3 key를 만든다.
-        """
-        path = item["path"]  # 예: "src/main.py", "src/app/routes/index.py"
-        download_url = item.get("download_url")
-
-        if not download_url:
-            logger.warning(f"File item has no download_url: {path}")
-            return
+        path = item["path"]
 
         # root_path 기준 상대 경로 계산
-        # root_path = "src"라면 "src/app/index.tsx" → "app/index.tsx"
         rel_path = path
         if root_path:
             if path.startswith(root_path + "/"):
-                rel_path = path[len(root_path) + 1 :]
+                rel_path = path[len(root_path) + 1:]
             elif path == root_path:
-                # root_path가 파일 이름인 경우 (예외적인 상황)
                 rel_path = os.path.basename(path)
-        # root_path가 비어 있으면 레포 루트 전체를 대상으로 하므로 path 그대로 사용
 
         s3_key = f"{base_prefix}/{rel_path}"
 
-        # 파일 바이트 다운로드
-        file_bytes = await SourceSnapshotService._download_file_bytes(
-            download_url=download_url,
-            headers=github.headers,  # private repo 대비
+        # 여기서 더 이상 download_url 사용 X
+        file_bytes = await github.download_file_bytes(
+            owner=owner,
+            repo=repo,
+            path=path,
+            ref=ref,
         )
 
-        # S3 업로드
         logger.info(f"Uploading to s3://{SOURCE_BUCKET_NAME}/{s3_key}")
         s3_client.put_object(
             Bucket=SOURCE_BUCKET_NAME,

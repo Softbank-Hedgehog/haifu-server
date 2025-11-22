@@ -128,24 +128,9 @@ class ProjectService:
 
     @staticmethod
     async def update_project(user_id: int, project_id: str, data: ProjectUpdate) -> ProjectResponse:
-        """
-        프로젝트 수정
-
-        Args:
-            user_id: 사용자 GitHub user ID
-            project_id: 프로젝트 ID
-            data: 수정할 데이터
-
-        Returns:
-            수정된 프로젝트 정보
-
-        Raises:
-            HTTPException: 프로젝트가 없거나 권한이 없는 경우
-        """
-        # 프로젝트 존재 확인 및 권한 체크
+        # 1. 권한 체크 (user_id 검증은 여기서 이미 끝남)
         await ProjectService.get_project(user_id, project_id)
 
-        # 수정할 필드만 추출 (None이 아닌 값만)
         updates = {}
         if data.name is not None:
             updates['name'] = data.name
@@ -155,19 +140,18 @@ class ProjectService:
         if not updates:
             raise HTTPException(status_code=400, detail="No fields to update")
 
-        # updated_at 갱신
         updates['updated_at'] = datetime.utcnow().isoformat() + 'Z'
 
         try:
             updated_item = await update_item(
                 projects_table,
-                key={'user_id': user_id, 'project_id': project_id},
+                # ✅ 테이블 PK만 사용
+                key={'project_id': project_id},
                 updates=updates
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to update project: {str(e)}")
 
-        # ProjectResponse는 'id' 필드를 요구하므로 'project_id'를 'id'로 매핑
         response_data = {
             'id': updated_item['project_id'],
             'name': updated_item['name'],
@@ -180,31 +164,18 @@ class ProjectService:
 
     @staticmethod
     async def delete_project(user_id: int, project_id: str) -> bool:
-        """
-        프로젝트 삭제 (하위 서비스도 모두 삭제)
-
-        Args:
-            user_id: 사용자 GitHub user ID
-            project_id: 프로젝트 ID
-
-        Returns:
-            삭제 성공 여부
-
-        Raises:
-            HTTPException: 프로젝트가 없거나 권한이 없는 경우
-        """
-        # 프로젝트 존재 확인 및 권한 체크
+        # 1. 권한 체크 (user_id 검증 포함)
         await ProjectService.get_project(user_id, project_id)
 
         try:
-            # 1. 하위 서비스 모두 삭제
+            # 2. 하위 서비스 삭제 (이 부분은 services_table PK가 project_id + service_id 라고 가정하면 OK)
             services = await query_items(
                 services_table,
-                key_condition_expression=Key('project_id').eq(project_id)
+                key_condition_expression=Key('project_id').eq(project_id),
+                index_name='project-index'
             )
 
             for service in services:
-                # 권한 확인 (user_id 일치 여부)
                 if service.get('user_id') != user_id:
                     raise HTTPException(status_code=403, detail="Forbidden: Cannot delete service")
 
@@ -213,10 +184,10 @@ class ProjectService:
                     key={'project_id': project_id, 'service_id': service['service_id']}
                 )
 
-            # 2. 프로젝트 삭제
+            # 3. 프로젝트 삭제 – 여기서도 PK만 사용
             await delete_item(
                 projects_table,
-                key={'user_id': user_id, 'project_id': project_id}
+                key={'project_id': project_id}
             )
 
             return True

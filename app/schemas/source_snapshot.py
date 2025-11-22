@@ -9,11 +9,8 @@ class SourceSnapshotRequest(BaseModel):
     service_id: str = Field(..., description="서비스 ID")
     owner: str = Field(..., description="GitHub 레포지토리 소유자 (org/user)")
     repo: str = Field(..., description="GitHub 레포지토리 이름")
-    branch: str = Field("main", description="브랜치 이름 (기본값: main)")
-    source_path: str = Field(
-        "",
-        description="레포 내부 기준 경로 (예: 'src', 'apps/backend'). 비우면 레포 루트 전체."
-    )
+    branch: str = Field(..., description="브랜치 이름 (기본값: main)")
+    source_path: str = Field(..., description="레포 내부 기준 경로 (예: 'src', 'apps/backend'). 비우면 레포 루트 전체.")
 
 
 class SourceSnapshotResponse(BaseModel):
