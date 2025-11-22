@@ -41,7 +41,7 @@ SERVICE_STATUS = ["pending", "running", "failed", "stopped"]
 
 class ServiceCreate(BaseModel):
     """서비스 생성 요청"""
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = Field(..., min_length=1, max_length=100, description="서비스 이름")
     repo_owner: str = Field(..., description="GitHub 레포 소유자")
     repo_name: str = Field(..., description="GitHub 레포 이름")

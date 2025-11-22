@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 class ProjectCreate(BaseModel):
     """프로젝트 생성 요청"""
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    id: str = Field(default_factory=lambda: str(uuid.uuid4())[:8])
     name: str = Field(..., min_length=1, max_length=100, description="프로젝트 이름")
     description: Optional[str] = Field(None, max_length=500, description="프로젝트 설명")
 
