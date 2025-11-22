@@ -1,4 +1,6 @@
 # app/github_service.py
+import json
+
 import httpx
 import base64
 from typing import Optional, List, Dict, Any
@@ -151,33 +153,24 @@ class GitHubService:
             'pushed_at': repo_data['pushed_at'],
         }
     
-    async def get_repository_contents(self, owner: str, repo: str, path: str = "", ref: Optional[str] = None) -> Any:
-        """레포지토리 파일/폴더 목록 조회"""
-        params = {}
+    async def get_repository_contents(
+        self,
+        owner: str,
+        repo: str,
+        path: str,
+        ref: str,
+    ):
         if path:
-            params['path'] = path
-        if ref:
-            params['ref'] = ref
-        
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f'{self.BASE_URL}/repos/{owner}/{repo}/contents',
-                    headers=self.headers,
-                    params=params,
-                    timeout=10.0
-                )
-        except httpx.RequestError:
-            raise GitHubAPIException(503, "GitHub API connection failed")
-        
-        if response.status_code == 401:
-            raise AuthenticationException("Invalid GitHub token")
-        elif response.status_code == 404:
-            raise GitHubAPIException(404, f"Path {path or 'root directory'} not found")
-        elif response.status_code != 200:
-            raise GitHubAPIException(response.status_code, "Failed to fetch contents")
-        
-        return response.json()
+            url = f"https://api.github.com/repos/{owner}/{repo}/contents/{path}"
+        else:
+            url = f"https://api.github.com/repos/{owner}/{repo}/contents"
+
+        params = {"ref": ref}
+
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, params=params, headers=self.headers)
+            resp.raise_for_status()
+            return resp.json()
     
     async def get_file_content(self, owner: str, repo: str, path: str, ref: Optional[str] = None) -> Dict[str, Any]:
         """특정 파일 내용 조회"""

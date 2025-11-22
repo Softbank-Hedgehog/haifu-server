@@ -1,4 +1,5 @@
 # app/service/source_snapshot_service.py
+import json
 import os
 import logging
 from typing import Dict, Any, Optional
@@ -67,14 +68,16 @@ class SourceSnapshotService:
 
     @staticmethod
     async def _walk_and_upload(
-        github: GitHubService,
-        owner: str,
-        repo: str,
-        current_path: str,
-        ref: str,
-        base_prefix: str,
-        root_path: str,
+            github: GitHubService,
+            owner: str,
+            repo: str,
+            current_path: str,
+            ref: str,
+            base_prefix: str,
+            root_path: str,
     ) -> int:
+        logger.info(f"[DEBUG] Entering _walk_and_upload: current_path='{current_path}'")
+
         try:
             contents = await github.get_repository_contents(
                 owner=owner,
@@ -82,46 +85,36 @@ class SourceSnapshotService:
                 path=current_path,
                 ref=ref,
             )
-            if isinstance(contents, list):
-                logger.info(
-                    f"[SNAPSHOT] Fetching path='{current_path}', "
-                    f"items={[(c.get('path'), c.get('type')) for c in contents]}"
-                )
-            else:
-                logger.info(
-                    f"[SNAPSHOT] Fetching path='{current_path}', "
-                    f"single item={(contents.get('path'), contents.get('type'))}"
-                )
+
+            logger.info(
+                "[DEBUG] Raw contents JSON: %s",
+                json.dumps(contents, indent=2, ensure_ascii=False),
+            )
         except Exception as e:
             raise SourceSnapshotServiceError(
                 f"Failed to get contents for {owner}/{repo}:{current_path}@{ref}",
                 cause=e,
             )
 
+        # 1) dict / list 를 하나의 리스트로 통일
+        if isinstance(contents, dict):
+            items = [contents]
+        elif isinstance(contents, list):
+            items = contents
+        else:
+            logger.warning(
+                f"[SNAPSHOT] Unknown contents type: {type(contents)} for path='{current_path}'"
+            )
+            return 0
+
         file_count = 0
 
-        # 단일 파일인 경우
-        if isinstance(contents, dict):
-            if contents.get("type") == "file":
-                await SourceSnapshotService._upload_file_item(
-                    github=github,
-                    item=contents,
-                    owner=owner,
-                    repo=repo,
-                    ref=ref,
-                    base_prefix=base_prefix,
-                    root_path=root_path,
-                )
-                return 1
-            return 0
-
-        # 디렉토리/리스트인 경우
-        if not isinstance(contents, list):
-            return 0
-
-        for item in contents:
+        # 2) 이제부터는 item['type'] 만 보고 처리
+        for item in items:
             item_type = item.get("type")
             item_path = item.get("path", "")
+
+            logger.info(f"[SNAPSHOT] item_type={item_type}, item_path={item_path}")
 
             if item_type == "dir":
                 # 혹시라도 자기 자신을 다시 타는 경우 방지
@@ -151,6 +144,7 @@ class SourceSnapshotService:
                     root_path=root_path,
                 )
                 file_count += 1
+
             else:
                 logger.info(f"[SNAPSHOT] Skipping {item_type}: {item_path}")
 
