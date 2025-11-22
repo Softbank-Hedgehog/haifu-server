@@ -14,8 +14,10 @@
     - 레포지토리
       - [레포지토리 목록 조회](#레포지토리-목록-조회)
       - [레포지토리 상세 조회](#레포지토리-상세-조회)
+      - [레포지토리 소스 스냅샷 저장](#레포지토리-소스-스냅샷-생성)
     - 기타
       - [서버 상태 확인](#7-서버-상태-확인)
+      
 
 ## 환경 설정
 
@@ -323,6 +325,128 @@ URL 정보
 - `name`: 레포지토리 이름 (프로젝트 성격 파악)
 - `description`: 사용자가 작성한 레포지토리 설명
 - `default_branch`: 기본 브랜치 (분석할 브랜치 결정)
+
+### 레포지토리 소스 스냅샷 생성
+
+사용자가 선택한 GitHub 레포지토리/브랜치/경로 기준으로 소스 파일들을 S3에 업로드하고, 업로드된 위치 정보를 반환합니다.
+이 API는 이후 배포 파이프라인이나 AI Agent 분석, RAG 컨텍스트에 사용할 소스 스냅샷을 만드는 용도로 사용됩니다.
+
+**POST /api/source-snapshots**
+
+* 요청 헤더
+
+```http
+Authorization: Bearer <JWT 토큰>
+Content-Type: application/json
+```
+
+* 요청 바디
+
+```json
+{
+  "project_id": "proj-abc",
+  "service_id": "svc-backend",
+  "owner": "softbank-hedgehog",
+  "repo": "haifu-backend",
+  "branch": "main",
+  "source_path": "app"
+}
+```
+
+요청 필드 설명
+
+| 필드          | 타입     | 필수  | 설명                                            | 예시                     |
+| ----------- | ------ | --- | --------------------------------------------- | ---------------------- |
+| project_id  | string | 예   | hAIfu 내부에서 사용하는 프로젝트 ID                       | `"proj-abc"`           |
+| service_id  | string | 예   | hAIfu 내부에서 사용하는 서비스 ID                        | `"svc-backend"`        |
+| owner       | string | 예   | GitHub 레포지토리 소유자 (user 또는 org)                | `"softbank-hedgehog"`  |
+| repo        | string | 예   | GitHub 레포지토리 이름                               | `"haifu-backend"`      |
+| branch      | string | 아니오 | 기준 브랜치 이름. 미지정 시 기본 브랜치(예: main)를 사용하는 것이 일반적 | `"main"`               |
+| source_path | string | 아니오 | 레포 내부 기준 경로. 비우면 레포 전체를 스냅샷 대상으로 사용           | `"app"`, `"src"`, `""` |
+
+* 응답
+
+정상 응답 (200 OK 또는 201 Created)
+
+```json
+{
+  "success": true,
+  "message": "Source snapshot created successfully",
+  "data": {
+    "bucket": "haifu-dev-source-bucket",
+    "s3_prefix": "user/123456/proj-abc/svc-backend/20251121T093012Z-sourcefile",
+    "file_count": 27
+  }
+}
+```
+
+에러 응답 예시
+
+```json
+{
+  "success": false,
+  "message": "SOURCE_BUCKET_NAME is not configured",
+  "error_code": "INTERNAL_ERROR",
+  "data": null
+}
+```
+
+응답 필드 설명
+
+| 필드         | 타입     | 설명                             | 예시                                                               |
+| ---------- | ------ | ------------------------------ | ---------------------------------------------------------------- |
+| `bucket`     | `string | 소스 스냅샷이 업로드된 S3 버킷 이름          | `"haifu-dev-source-bucket"`                                      |
+| `s3_prefix`  | `string` | 업로드된 모든 파일이 공통으로 가지는 S3 prefix | `"user/123456/proj-abc/svc-backend/20251121T093012Z-sourcefile"` |
+| `file_count` | `number` | 업로드된 파일 개수                     | `27`                                                             |
+
+S3 객체 키 구조
+
+```text
+user/{userId}/{projectId}/{serviceId}/{UTC-날짜}-sourcefile/{레포 상대 경로}
+
+예:
+user/123456/proj-abc/svc-backend/20251121T093012Z-sourcefile/app/main.py
+user/123456/proj-abc/svc-backend/20251121T093012Z-sourcefile/app/routes/index.py
+```
+
+프론트엔드 사용 예시 (TypeScript)
+
+```ts
+const body = {
+  project_id: "proj-abc",
+  service_id: "svc-backend",
+  owner: "softbank-hedgehog",
+  repo: "haifu-backend",
+  branch: "main",
+  source_path: "app"
+};
+
+const res = await fetch("/api/source-snapshots", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
+  },
+  body: JSON.stringify(body)
+});
+
+const json = await res.json();
+// json.data.bucket     → S3 버킷 이름
+// json.data.s3_prefix → 이 prefix 아래에 소스 파일들이 저장됨
+// json.data.file_count → 업로드된 파일 개수
+```
+
+주의사항
+
+* 이 API는 GitHub OAuth를 통해 발급된 access token을 사용하며, 현재 로그인한 사용자의 권한으로 private 레포지토리도 접근 가능합니다.
+* 서버가 실행되는 환경에는 다음 설정이 필요합니다.
+
+  * 환경변수 `SOURCE_BUCKET_NAME`: 소스 스냅샷을 저장할 S3 버킷 이름
+  * AWS 자격 증명:
+
+    * 로컬 개발: `AWS_PROFILE` 또는 `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION`
+    * ECS/Fargate 환경: Task Role에 대상 버킷에 대한 `s3:PutObject` 권한 부여
+
 
 ### 서버 상태 확인
 
