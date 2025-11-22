@@ -73,6 +73,14 @@ def readiness_check():
     """Readiness probe (Kubernetes/ECS용)"""
     return {"status": "ready"}
 
+@app.get("/health")
+def health_check():
+    """Health check"""
+    return success_response(
+        data={"status": "ok"},
+        message="Server is healthy"
+    )
+
 @app.get("/api/info")
 def api_system_info():
     """시스템 정보 (/api prefix용)"""
