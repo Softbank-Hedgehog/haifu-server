@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+import json
 import boto3
 from pydantic.v1 import BaseSettings
 
@@ -46,32 +47,42 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     # Lambda: Parameter Store 사용
     try:
-        ssm = boto3.client("ssm", region_name='ap-northeast-2')
+        secrets_client = boto3.client("secretsmanager", region_name="ap-northeast-2")
+        secret_name = "haifu-server-main"
 
-        def get_param(name: str) ->  str:
-            try:
-                response = ssm.get_parameter(Name=name, WithDecryption=True)
-                return response['Parameter']['Value']
-            except Exception as e:
-                import logging
-                logging.getLogger(__name__).error(f"Failed to get parameter {name}: {e}")
-                return ""
+        # Secrets Manager에서 한 번만 가져오기
+        response = secrets_client.get_secret_value(SecretId=secret_name)
 
+        if "SecretString" in response:
+            secret_str = response["SecretString"]
+        else:
+            # 혹시 Binary로 저장돼 있으면
+            import base64
+            secret_str = base64.b64decode(response["SecretBinary"]).decode("utf-8")
+
+        secret_dict = json.loads(secret_str)
+
+        # 여기서부터는 이름으로 꺼내 쓰기
+        def get_secret(key: str) -> str:
+            return secret_dict.get(key, "")
 
         return Settings(
-            GITHUB_CLIENT_ID=get_param("/haifu/github-client-id"),
-            GITHUB_CLIENT_SECRET=get_param("/haifu/github-client-secret"),
-            JWT_SECRET_KEY=get_param("/haifu/jwt-secret"),
-            FRONTEND_URL=get_param("/haifu/frontend-url"),
+            GITHUB_CLIENT_ID=get_secret("GITHUB_CLIENT_ID"),
+            GITHUB_CLIENT_SECRET=get_secret("GITHUB_CLIENT_SECRET"),
+            JWT_SECRET_KEY=get_secret("JWT_SECRET_KEY"),
+            FRONTEND_URL=get_secret("FRONTEND_URL"),
             ALLOWED_FRONTEND_URLS=[
                 "http://localhost:3000",
                 "https://softbank-hedgehog.github.io",
-                "https://softbank-hedgehog.github.io/haifu-client"
-            ]
+                "https://softbank-hedgehog.github.io/haifu-client",
+                "https://d1yacqe3a2p57p.cloudfront.net",
+                "http://haifu.cloud",
+                "https://haifu.cloud"
+            ],
         )
     except Exception as e:
         import logging
-        logging.getLogger(__name__).error(f"Failed to load parameter store: {e}")
+        logging.getLogger(__name__).error(f"Failed to load secret manager: {e}")
         return Settings()
 
 settings = get_settings()
