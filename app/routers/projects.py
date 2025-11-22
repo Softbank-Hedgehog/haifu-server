@@ -26,7 +26,7 @@ async def create_project(
     Returns:
         생성된 프로젝트 정보
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
 
     project = await ProjectService.create_project(user_id, data)
 
@@ -49,7 +49,7 @@ async def list_projects(
     Returns:
         사용자의 프로젝트 목록 (최신순)
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     projects = await ProjectService.list_projects(user_id)
 
     return success_response(
@@ -73,7 +73,7 @@ async def get_project(
     Returns:
         프로젝트 상세 정보
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     project = await ProjectService.get_project(user_id, project_id)
 
     return success_response(
@@ -99,7 +99,7 @@ async def update_project(
     Returns:
         수정된 프로젝트 정보
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     project = await ProjectService.update_project(user_id, project_id, data)
 
     return success_response(
@@ -123,7 +123,7 @@ async def delete_project(
     Returns:
         삭제 성공 메시지
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     await ProjectService.delete_project(user_id, project_id)
 
     return success_response(

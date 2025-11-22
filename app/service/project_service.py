@@ -12,7 +12,7 @@ class ProjectService:
     """프로젝트 관련 비즈니스 로직"""
 
     @staticmethod
-    async def create_project(user_id: int, data: ProjectCreate) -> ProjectResponse:
+    async def create_project(user_id: str, data: ProjectCreate) -> ProjectResponse:
         """
         프로젝트 생성
 
@@ -54,7 +54,7 @@ class ProjectService:
         return ProjectResponse(**response_data)
 
     @staticmethod
-    async def get_project(user_id: int, project_id: str) -> ProjectResponse:
+    async def get_project(user_id: str, project_id: str) -> ProjectResponse:
         """
         프로젝트 조회
 
@@ -93,7 +93,7 @@ class ProjectService:
         return ProjectResponse(**response_data)
 
     @staticmethod
-    async def list_projects(user_id: int) -> List[ProjectResponse]:
+    async def list_projects(user_id: str) -> List[ProjectResponse]:
         """
         사용자의 프로젝트 목록 조회
 
@@ -108,7 +108,7 @@ class ProjectService:
                 projects_table,
                 key_condition_expression=Key('user_id').eq(user_id),
                 ScanIndexForward=False,  # 내림차순 정렬
-                index_name = "user-index",  # ← 이 줄 추가
+                index_name = "user-index",
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to list projects: {str(e)}")
@@ -127,7 +127,7 @@ class ProjectService:
         ) for item in items]
 
     @staticmethod
-    async def update_project(user_id: int, project_id: str, data: ProjectUpdate) -> ProjectResponse:
+    async def update_project(user_id: str, project_id: str, data: ProjectUpdate) -> ProjectResponse:
         # 1. 권한 체크 (user_id 검증은 여기서 이미 끝남)
         await ProjectService.get_project(user_id, project_id)
 
@@ -163,7 +163,7 @@ class ProjectService:
         return ProjectResponse(**response_data)
 
     @staticmethod
-    async def delete_project(user_id: int, project_id: str) -> bool:
+    async def delete_project(user_id: str, project_id: str) -> bool:
         # 1. 권한 체크 (user_id 검증 포함)
         await ProjectService.get_project(user_id, project_id)
 
