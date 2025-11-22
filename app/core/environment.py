@@ -27,10 +27,7 @@ class Environment:
     @staticmethod
     def get_backend_url() -> str:
         """현재 환경에 맞는 백엔드 URL 반환"""
-        if Environment.is_lambda():
-            return "https://b2s3zdwgbpxjbkbyhfzi4tolqq0igzuo.lambda-url.ap-northeast-2.on.aws"
-        else:
-            return "http://localhost:8001"
+        return "http://haifu-dev-alb-1459823603.ap-northeast-2.elb.amazonaws.com"
     
     @staticmethod
     def get_environment_name() -> str:
