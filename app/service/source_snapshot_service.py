@@ -35,7 +35,7 @@ class SourceSnapshotService:
         전체 파일을 재귀적으로 순회하여 S3에 업로드한다.
         """
         if not SOURCE_BUCKET_NAME:
-            raise SourceSnapshotServiceError("SOURCE_BUCKET_NAME is not configured")
+                raise SourceSnapshotServiceError("SOURCE_BUCKET_NAME is not configured")
 
         # user, project, service 기준 prefix 생성
         date_str = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")

@@ -8,7 +8,6 @@ from pydantic.v1 import BaseSettings
 class Settings(BaseSettings):
     APP_NAME: str = "hAIfu Server"
     DEBUG: bool = False
-    ENVIRONMENT: str = "local"
 
     # GitHub OAuth
     GITHUB_CLIENT_ID: str = os.getenv("GITHUB_CLIENT_ID")
@@ -21,13 +20,8 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "dev")
     PORT: int = int(os.getenv("PORT", "8000"))
     FRONTEND_URL: str = os.getenv("FRONTEND_URL")
-    # DynamoDB 테이블
-    DYNAMODB_ENDPOINT: str = ""
-    DYNAMODB_PROJECTS_TABLE: str = os.getenv("DYNAMODB_PROJECTS_TABLE")
-    DYNAMODB_SERVICES_TABLE: str = os.getenv("DYNAMODB_SERVICES_TABLE")
 
     # Frontend
-    FRONTEND_URL: str = "http://localhost:3000"
     ALLOWED_FRONTEND_URLS: list = [
         "http://localhost:3000",
         "https://softbank-hedgehog.github.io",
@@ -40,10 +34,7 @@ class Settings(BaseSettings):
     # AWS
     AWS_REGION: str = "ap-northeast-2"
 
-    # Server
-    PORT: int = 8000
-
-    # DynamoDB
+    # DynamoDB Table
     DYNAMODB_ENDPOINT: str = ""  # 로컬이면 http://localhost:8000, 프로덕션이면 비워둠
     DYNAMODB_PROJECTS_TABLE: str = "haifu-projects"
     DYNAMODB_SERVICES_TABLE: str = "haifu-services"

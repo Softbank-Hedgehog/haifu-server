@@ -27,6 +27,7 @@ async def create_project(
         생성된 프로젝트 정보
     """
     user_id = current_user['user_id']
+
     project = await ProjectService.create_project(user_id, data)
 
     return success_response(

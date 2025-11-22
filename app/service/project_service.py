@@ -105,7 +105,8 @@ class ProjectService:
             items = await query_items(
                 projects_table,
                 key_condition_expression=Key('user_id').eq(user_id),
-                ScanIndexForward=False  # 내림차순 정렬
+                ScanIndexForward=False,  # 내림차순 정렬
+                index_name = "user-index",  # ← 이 줄 추가
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to list projects: {str(e)}")

@@ -6,6 +6,8 @@ from fastapi import HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 
+import logging
+
 security = HTTPBearer()
 
 
@@ -45,6 +47,7 @@ def decode_token(token: str) -> Dict:
     Raises:
         HTTPException: 토큰이 유효하지 않은 경우
     """
+
     try:
         payload = jwt.decode(
             token,
@@ -52,12 +55,12 @@ def decode_token(token: str) -> Dict:
             algorithms=[settings.JWT_ALGORITHM]
         )
         return payload
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as e:
         raise HTTPException(
             status_code=401,
             detail="Token has expired"
         )
-    except JWTError:
+    except JWTError as e:
         raise HTTPException(
             status_code=401,
             detail="Invalid token"
@@ -79,6 +82,7 @@ async def get_current_user(
     Raises:
         HTTPException: 인증 실패 시
     """
+
     token = credentials.credentials
     payload = decode_token(token)
 
