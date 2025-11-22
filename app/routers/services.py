@@ -33,7 +33,7 @@ async def create_service(
     Returns:
         생성된 서비스 정보
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     service = await ServiceService.create_service(user_id, project_id, data)
 
     return success_response(
@@ -61,7 +61,7 @@ async def list_services(
     Returns:
         서비스 목록
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     services = await ServiceService.list_services(user_id, project_id)
 
     return success_response(
@@ -91,7 +91,7 @@ async def get_service(
     Returns:
         서비스 상세 정보
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     service = await ServiceService.get_service(user_id, service_id, project_id)
 
     return success_response(
@@ -123,7 +123,7 @@ async def update_service(
     Returns:
         수정된 서비스 정보
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     service = await ServiceService.update_service(user_id, service_id, project_id, data)
 
     return success_response(
@@ -153,7 +153,7 @@ async def delete_service(
     Returns:
         삭제 성공 메시지
     """
-    user_id = current_user['user_id']
+    user_id = str(current_user['user_id'])
     await ServiceService.delete_service(user_id, service_id, project_id)
 
     return success_response(

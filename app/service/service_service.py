@@ -20,7 +20,7 @@ class ServiceService:
     """서비스(배포) 관련 비즈니스 로직"""
 
     @staticmethod
-    async def create_service(user_id: int, project_id: str, data: ServiceCreate) -> ServiceResponse:
+    async def create_service(user_id: str, project_id: str, data: ServiceCreate) -> ServiceResponse:
         """
         서비스 생성
         """
@@ -84,7 +84,7 @@ class ServiceService:
         return ServiceResponse(**response_data)
 
     @staticmethod
-    async def get_service(user_id: int, service_id: str, project_id: str) -> ServiceResponse:
+    async def get_service(user_id: str, service_id: str, project_id: str) -> ServiceResponse:
         """
         서비스 조회
         """
@@ -127,7 +127,7 @@ class ServiceService:
         return ServiceResponse(**response_data)
 
     @staticmethod
-    async def list_services(user_id: int, project_id: str) -> List[ServiceResponse]:
+    async def list_services(user_id: str, project_id: str) -> List[ServiceResponse]:
         """
         프로젝트 내 서비스 목록 조회
         """
@@ -172,7 +172,7 @@ class ServiceService:
 
     @staticmethod
     async def update_service(
-        user_id: int,
+        user_id: str,
         service_id: str,
         project_id: str,
         data: ServiceUpdate,
@@ -255,7 +255,7 @@ class ServiceService:
         return ServiceResponse(**response_data)
 
     @staticmethod
-    async def delete_service(user_id: int, service_id: str, project_id: str) -> bool:
+    async def delete_service(user_id: str, service_id: str, project_id: str) -> bool:
         """
         서비스 삭제
         """
