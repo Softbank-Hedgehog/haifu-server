@@ -1,7 +1,6 @@
 # app/service/source_snapshot_service.py
 import os
 import logging
-from datetime import datetime
 from typing import Dict, Any, List, Union, Optional
 from urllib.parse import quote
 
@@ -16,7 +15,6 @@ logger = logging.getLogger(__name__)
 s3_client = boto3.client("s3")
 
 SOURCE_BUCKET_NAME = os.getenv("SOURCE_BUCKET_NAME")
-
 
 
 class SourceSnapshotServiceError(Exception):
@@ -46,15 +44,14 @@ class SourceSnapshotService:
         전체 파일을 재귀적으로 순회하여 S3에 업로드한다.
         """
         if not SOURCE_BUCKET_NAME:
-                raise SourceSnapshotServiceError("SOURCE_BUCKET_NAME is not configured")
+            raise SourceSnapshotServiceError("SOURCE_BUCKET_NAME is not configured")
 
         # user, project, service 기준 prefix 생성
-        date_str = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+        # (예: user/76734067/PROJECT_ID/SERVICE_ID)
         base_prefix = SourceSnapshotService._build_base_prefix(
             user_id=user_id,
             project_id=req.project_id,
             service_id=req.service_id,
-            date_str=date_str,
         )
 
         # source_path 기준 경로 정리
@@ -78,16 +75,18 @@ class SourceSnapshotService:
         )
 
     @staticmethod
-    def _build_base_prefix(user_id: int, project_id: str, service_id: str, date_str: str) -> str:
+    def _build_base_prefix(user_id: int, project_id: str, service_id: str) -> str:
         """
-        user/{userId}/{projectId}/{serviceId}/{date}-sourcefile 형태 prefix 생성
+        user/{userId}/{projectId}/{serviceId} 형태 prefix 생성
         URL-safe 하게 인코딩
+
+        예:
+          user/76734067/544f8aa-ad44-4477-8e0c-0008ac24e499/3b7a0c4e-...-service
         """
         return (
             f"user/{quote(str(user_id))}"
             f"/{quote(project_id)}"
             f"/{quote(service_id)}"
-            f"/{date_str}-sourcefile"
         )
 
     @staticmethod
@@ -208,10 +207,10 @@ class SourceSnapshotService:
 
         s3_key = f"{base_prefix}/{rel_path}"
 
-        # 파일 바이트 다운로드 (깊이/타입 무관)
+        # 파일 바이트 다운로드
         file_bytes = await SourceSnapshotService._download_file_bytes(
             download_url=download_url,
-            headers=github.headers,  # 기존 GitHubService의 헤더 재사용 (private repo 대비)
+            headers=github.headers,  # private repo 대비
         )
 
         # S3 업로드
@@ -229,7 +228,6 @@ class SourceSnapshotService:
         private repo 대비를 위해 Authorization 헤더를 그대로 사용한다.
         """
         async with httpx.AsyncClient() as client:
-            # raw URL에도 Authorization 붙여줌 (private repo 지원)
             resp = await client.get(download_url, headers=headers, timeout=30.0)
             if resp.status_code != 200:
                 raise SourceSnapshotServiceError(
