@@ -176,7 +176,7 @@ class ServiceResponse(BaseModel):
                 "memory": 512,
                 "port": 8080,
                 "start_command": "npm start",
-                "dockerfile": "FROM node:18-alpine\n...",
+                "dockerfile": "dockerfile! dockerfile! this is dockerfile! believe me",
                 "environment_variables": {
                     "NODE_ENV": "production"
                 },
@@ -185,3 +185,10 @@ class ServiceResponse(BaseModel):
                 "updated_at": "2025-11-18T10:35:00Z"
             }
         }
+
+class DeployResponse(BaseModel):
+    service_id: str = Field(..., description="배포 요청한 서비스 ID")
+    # project_id: str = Field(..., description="프로젝트 ID")
+    service_type: str = Field(..., description="서비스 타입 (static | dynamic)")
+    status: str = Field(..., description="배포 요청 상태 (queued 등)")
+    lambda_request_id: Optional[str] = Field(None, description="Lambda invoke RequestId")

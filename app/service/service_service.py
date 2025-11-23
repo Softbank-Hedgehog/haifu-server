@@ -1,6 +1,10 @@
 # app/service/service_service.py
+import json
+import os
 from datetime import datetime
 from typing import List
+
+import boto3
 from boto3.dynamodb.conditions import Key
 from fastapi import HTTPException
 
@@ -12,9 +16,12 @@ from app.database import (
     delete_item,
     query_items,
 )
-from app.schemas.service import ServiceCreate, ServiceUpdate, ServiceResponse
+from app.schemas.service import ServiceCreate, ServiceUpdate, ServiceResponse, DeployResponse
 from app.service.project_service import ProjectService
 
+
+lambda_client = boto3.client("lambda")
+DEPLOY_LAMBDA_NAME = "haifu-dev-deployment"  # or ARN
 
 class ServiceService:
     """서비스(배포) 관련 비즈니스 로직"""
@@ -284,3 +291,81 @@ class ServiceService:
             return True
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to delete service: {str(e)}")
+
+    @staticmethod
+    async def get_service_by_id(service_id: str) -> dict:
+        try:
+            item = await get_item(  # get_item 헬퍼가 있다면
+                services_table,
+                key={"service_id": service_id},
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to get service: {e}")
+
+        if not item:
+            raise HTTPException(status_code=404, detail="Service not found")
+
+        return item
+
+    @staticmethod
+    async def deploy_service(user_id: str, service_id: str) -> DeployResponse:
+        """
+        서비스 배포 트리거
+        1) service_id로 DynamoDB에서 서비스 조회
+        2) 권한 체크 (user_id 일치 여부)
+        3) static / dynamic 에 따라 Lambda payload 구성
+        4) Lambda invoke
+        """
+        if not DEPLOY_LAMBDA_NAME:
+            raise HTTPException(status_code=500, detail="DEPLOY_LAMBDA_NAME is not configured")
+
+        service = await ServiceService.get_service_by_id(service_id)
+
+        # 권한 체크
+
+        service_type = service.get("service_type", "dynamic")  # 기본값은 dynamic 정도로
+
+        base_payload = {
+            "service_id": service["service_id"],
+            "project_id": service["project_id"],
+            "service_type": service_type,
+            "runtime": service.get("runtime"),
+            "port": service.get("port"),
+            "environment_variables": service.get("environment_variables") or {},
+        }
+
+        if service_type == "static":
+            # 네가 설계한 정적 배포용 필드
+            payload = {
+                **base_payload,
+                "build_commands": service.get("build_commands", []),
+                "build_output_dir": service.get("build_output_dir"),
+                "node_version": service.get("node_version"),
+            }
+        else:
+            # dynamic
+            payload = {
+                **base_payload,
+                "cpu": service.get("cpu"),
+                "memory": service.get("memory"),
+                "start_command": service.get("start_command"),
+                "dockerfile": service.get("dockerfile"),
+            }
+
+        try:
+            resp = lambda_client.invoke(
+                FunctionName=DEPLOY_LAMBDA_NAME,
+                InvocationType="Event",  # 비동기로 던지고 바로 리턴
+                Payload=json.dumps(payload).encode("utf-8"),
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to invoke deploy lambda: {e}")
+
+        request_id = resp.get("ResponseMetadata", {}).get("RequestId")
+
+        return DeployResponse(
+            service_id=service_id,
+            service_type=service_type,
+            status="queued",
+            lambda_request_id=request_id,
+        )
