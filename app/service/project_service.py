@@ -168,26 +168,27 @@ class ProjectService:
         await ProjectService.get_project(user_id, project_id)
 
         try:
-            # 2. 하위 서비스 삭제 (이 부분은 services_table PK가 project_id + service_id 라고 가정하면 OK)
+            # 2. 하위 서비스 삭제 (project-index GSI로 조회)
             services = await query_items(
                 services_table,
                 key_condition_expression=Key('project_id').eq(project_id),
-                index_name='project-index'
+                index_name='project-index',
             )
 
             for service in services:
-                if service.get('user_id') != user_id:
+                if str(service.get('user_id')) != str(user_id):
                     raise HTTPException(status_code=403, detail="Forbidden: Cannot delete service")
 
+                # 여기! 테이블 PK는 service_id 하나만 사용해야 함
                 await delete_item(
                     services_table,
-                    key={'project_id': project_id, 'service_id': service['service_id']}
+                    key={'service_id': service['service_id']},
                 )
 
             # 3. 프로젝트 삭제 – 여기서도 PK만 사용
             await delete_item(
                 projects_table,
-                key={'project_id': project_id}
+                key={'project_id': project_id},
             )
 
             return True
@@ -196,3 +197,4 @@ class ProjectService:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to delete project: {str(e)}")
+
