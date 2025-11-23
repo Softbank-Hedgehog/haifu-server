@@ -5,7 +5,7 @@ from mangum import Mangum
 from app.core.config import settings
 from app.core.environment import Environment
 from app.core.logging import get_logger
-from app.routers import auth, repos, health, projects, services, source_snapshot, github
+from app.routers import auth, repos, health, projects, services, source_snapshot, github, deploy
 from app.core.exceptions import http_exception_handler, general_exception_handler
 from app.schemas.common import success_response, ApiResponse, ServerInfo, common_responses
 
@@ -41,6 +41,7 @@ app.include_router(services.router, prefix="/api")
 app.include_router(health.router)  # health는 루트에 유지
 app.include_router(source_snapshot.router, prefix="/api")
 app.include_router(github.router, prefix="/api")
+app.include_router(deploy.router, prefix="/api")
 @app.get("/", response_model=ApiResponse[ServerInfo], responses=common_responses)
 def root():
     """Health check"""

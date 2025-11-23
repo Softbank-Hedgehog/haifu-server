@@ -126,9 +126,6 @@ class ServiceService:
         if not item or item.get("project_id") != project_id:
             raise HTTPException(status_code=404, detail="Service not found")
 
-        if str(item.get("user_id")) != str(user_id):
-            raise HTTPException(status_code=403, detail="Forbidden: Access denied")
-
         def _to_int(value):
             if isinstance(value, Decimal):
                 return int(value)
@@ -316,23 +313,18 @@ class ServiceService:
     async def deploy_service(user_id: str, service_id: str) -> DeployResponse:
         """
         서비스 배포 트리거
-        1) service_id로 DynamoDB에서 서비스 조회
-        2) 권한 체크 (user_id 일치 여부)
-        3) static / dynamic 에 따라 Lambda payload 구성
-        4) Lambda invoke
         """
         if not DEPLOY_LAMBDA_NAME:
             raise HTTPException(status_code=500, detail="DEPLOY_LAMBDA_NAME is not configured")
 
         service = await ServiceService.get_service_by_id(service_id)
 
-        # 권한 체크
-
-        service_type = service.get("service_type")  # 기본값은 dynamic 정도로
+        service_type = service.get("service_type")
 
         base_payload = {
-            "service_id": service_id,
+            "user_id": service["user_id"],  # ← 람다 validate_parameters 에서 필수
             "project_id": service["project_id"],
+            "service_id": service_id,
             "service_type": service_type,
             "runtime": service.get("runtime"),
             "port": service.get("port"),
@@ -340,7 +332,6 @@ class ServiceService:
         }
 
         if service_type == "static":
-            # 네가 설계한 정적 배포용 필드
             payload = {
                 **base_payload,
                 "build_commands": service.get("build_commands", []),
@@ -348,7 +339,6 @@ class ServiceService:
                 "node_version": service.get("node_version"),
             }
         else:
-            # dynamic
             payload = {
                 **base_payload,
                 "cpu": service.get("cpu"),
@@ -357,10 +347,23 @@ class ServiceService:
                 "dockerfile": service.get("dockerfile"),
             }
 
+        # Decimal → int 로 변환 (JSON 직렬화용)
+        def _sanitize_for_json(obj):
+            if isinstance(obj, Decimal):
+                # cpu/memory/port 같은 건 정수라 int로 변환
+                return int(obj)
+            if isinstance(obj, dict):
+                return {k: _sanitize_for_json(v) for k, v in obj.items()}
+            if isinstance(obj, (list, tuple)):
+                return [_sanitize_for_json(v) for v in obj]
+            return obj
+
+        payload = _sanitize_for_json(payload)
+
         try:
             resp = lambda_client.invoke(
                 FunctionName=DEPLOY_LAMBDA_NAME,
-                InvocationType="Event",  # 비동기로 던지고 바로 리턴
+                InvocationType="Event",  # 비동기
                 Payload=json.dumps(payload).encode("utf-8"),
             )
         except Exception as e:
