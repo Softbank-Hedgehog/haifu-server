@@ -101,35 +101,76 @@ class ServiceCreate(BaseModel):
 
 class ServiceUpdate(BaseModel):
     """서비스 수정 요청"""
-    name: Optional[str] = Field(None, min_length=1, max_length=100, description="서비스 이름")
-    branch: Optional[str] = Field(None, description="배포 브랜치")
-    runtime: Optional[str] = Field(None, description="런타임 환경")
-    cpu: Optional[str] = Field(None, description="CPU 사양")
-    memory: Optional[str] = Field(None, description="메모리 사양")
-    port: Optional[int] = Field(None, ge=1, le=65535, description="애플리케이션 포트")
-    build_command: Optional[str] = Field(None, description="빌드 명령어")
-    start_command: Optional[str] = Field(None, description="시작 명령어")
-    environment_variables: Optional[Dict[str, str]] = Field(None, description="환경변수")
 
-    @field_validator('runtime')
+    # 공통 리소스 정보
+    runtime: Optional[str] = Field(
+        None,
+        description="런타임 환경 (예: nodejs18, python3.11 등)"
+    )
+    cpu: Optional[str] = Field(
+        None,
+        description="CPU 사양 (예: 256, 512)"
+    )
+    memory: Optional[str] = Field(
+        None,
+        description="메모리 사양 (MB 단위, 예: 512, 1024)"
+    )
+    port: Optional[int] = Field(
+        None,
+        ge=1,
+        le=65535,
+        description="서비스 포트"
+    )
+
+    # 동적(dynamic) 서비스 전용
+    start_command: Optional[str] = Field(
+        None,
+        description="시작 명령어 (예: npm start, uvicorn app.main:app 등)"
+    )
+    dockerfile: Optional[str] = Field(
+        None,
+        description="커스텀 Dockerfile 내용 또는 경로"
+    )
+
+    # 정적(static) 서비스 전용
+    build_commands: Optional[List[str]] = Field(
+        None,
+        description="빌드 명령어 목록 (예: ['npm install', 'npm run build'])"
+    )
+    build_output_dir: Optional[str] = Field(
+        None,
+        description="빌드 산출물 디렉토리 (예: dist, build)"
+    )
+    node_version: Optional[str] = Field(
+        None,
+        description="Node.js 버전 (예: 18, 20)"
+    )
+
+    # 공통
+    environment_variables: Optional[Dict[str, str]] = Field(
+        None,
+        description="환경 변수 (KEY=VALUE 형태)"
+    )
+
+    @field_validator("runtime")
     @classmethod
-    def validate_runtime(cls, v):
+    def validate_runtime(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in RUNTIMES:
             raise ValueError(f"Invalid runtime. Must be one of: {', '.join(RUNTIMES)}")
         return v
 
-    @field_validator('cpu')
+    @field_validator("cpu")
     @classmethod
-    def validate_cpu(cls, v):
+    def validate_cpu(cls, v: Optional[int]) -> Optional[int]:
         if v is not None and v not in CPU_OPTIONS:
-            raise ValueError(f"Invalid CPU. Must be one of: {', '.join(CPU_OPTIONS)}")
+            raise ValueError(f"Invalid CPU. Must be one of: {', '.join(map(str, CPU_OPTIONS))}")
         return v
 
-    @field_validator('memory')
+    @field_validator("memory")
     @classmethod
-    def validate_memory(cls, v):
+    def validate_memory(cls, v: Optional[int]) -> Optional[int]:
         if v is not None and v not in MEMORY_OPTIONS:
-            raise ValueError(f"Invalid memory. Must be one of: {', '.join(MEMORY_OPTIONS)}")
+            raise ValueError(f"Invalid memory. Must be one of: {', '.join(map(str, MEMORY_OPTIONS))}")
         return v
 
 
@@ -142,8 +183,8 @@ class ServiceResponse(BaseModel):
 
     # 공통 리소스 정보
     runtime: Optional[str] = Field(None, description="런타임 환경 (nodejs18, python3.11 등)")
-    cpu: Optional[int] = Field(None, description="CPU (예: 256, 512)")
-    memory: Optional[int] = Field(None, description="메모리 (MB 단위)")
+    cpu: Optional[str] = Field(None, description="CPU 사양 (예: 4 vCPU)")
+    memory: Optional[str] = Field(None, description="메모리 사양 (예: 8 GB)")
     port: Optional[int] = Field(None, description="서비스 포트")
 
     # 동적(dynamic) 서비스 전용
