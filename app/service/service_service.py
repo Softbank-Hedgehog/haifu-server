@@ -24,63 +24,77 @@ class ServiceService:
         """
         서비스 생성
         """
+
         # 1. 프로젝트 존재 확인 및 권한 체크
         await ProjectService.get_project(user_id, project_id)
 
-        # 2. CPU-Memory 조합 검증
-        try:
-            data.validate_cpu_memory_combination()
-        except ValueError as e:
-            raise HTTPException(status_code=422, detail=str(e))
-
-        # 3. 서비스 생성
         now = datetime.utcnow().isoformat() + "Z"
 
+        # 공통 필드 (static / dynamic 둘 다 공통으로 가지는 부분)
         item = {
             "project_id": project_id,
             "service_id": data.id,
-            "user_id": user_id,  # 권한 체크용 / 필요시 GSI 용도
-            "name": data.name,
-            "repo_owner": data.repo_owner,
-            "repo_name": data.repo_name,
-            "branch": data.branch,
+            "user_id": user_id,
+            "service_type": data.service_type,
+
             "runtime": data.runtime,
             "cpu": data.cpu,
             "memory": data.memory,
             "port": data.port,
-            "build_command": data.build_command,
-            "start_command": data.start_command,
+
             "environment_variables": data.environment_variables or {},
-            "status": "pending",  # 초기 상태
+
             "deployment_url": None,
             "created_at": now,
             "updated_at": now,
         }
 
+        if data.service_type == "dynamic":
+            # 동적일 때 추가되는 필드
+            item.update(
+                {
+                    "start_command": data.start_command,
+                    "dockerfile": data.dockerfile,
+                }
+            )
+        else:
+            # 정적일 때 추가되는 필드
+            item.update(
+                {
+                    "build_commands": data.build_commands,
+                    "build_output_dir": data.build_output_dir,
+                    "node_version": data.node_version,
+                }
+            )
+
+        # DynamoDB 저장
         try:
             await put_item(services_table, item)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Failed to create service: {str(e)}")
 
+        # 응답용 (ServiceResponse 필드에 맞게 조정)
         response_data = {
             "id": item["service_id"],
             "project_id": item["project_id"],
-            "name": item["name"],
-            "repo_owner": item["repo_owner"],
-            "repo_name": item["repo_name"],
-            "branch": item["branch"],
-            "runtime": item["runtime"],
-            "cpu": item["cpu"],
-            "memory": item["memory"],
-            "port": item["port"],
-            "build_command": item.get("build_command"),
+            "user_id": item["user_id"],
+            "service_type": item["service_type"],
+            "runtime": item.get("runtime"),
+            "cpu": item.get("cpu"),
+            "memory": item.get("memory"),
+            "port": item.get("port"),
             "start_command": item.get("start_command"),
+            "dockerfile": item.get("dockerfile"),
+            "port": item.get("port"),
+            "build_commands": item.get("build_commands"),
+            "build_output_dir": item.get("build_output_dir"),
+            "node_version": item.get("node_version"),
             "environment_variables": item.get("environment_variables"),
-            "status": item["status"],
             "deployment_url": item.get("deployment_url"),
             "created_at": item["created_at"],
             "updated_at": item["updated_at"],
         }
+
         return ServiceResponse(**response_data)
 
     @staticmethod
