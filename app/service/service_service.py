@@ -328,10 +328,10 @@ class ServiceService:
 
         # 권한 체크
 
-        service_type = service.get("service_type", "dynamic")  # 기본값은 dynamic 정도로
+        service_type = service.get("service_type")  # 기본값은 dynamic 정도로
 
         base_payload = {
-            "service_id": service["service_id"],
+            "service_id": service_id,
             "project_id": service["project_id"],
             "service_type": service_type,
             "runtime": service.get("runtime"),
